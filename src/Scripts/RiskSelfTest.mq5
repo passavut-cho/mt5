@@ -93,6 +93,30 @@ void RunFixedCases()
   }
 
 //+------------------------------------------------------------------+
+//| ชุด D4: pre-trade check — โดน SL แล้ว equity ต้องไม่ <= limit รายวัน   |
+//+------------------------------------------------------------------+
+void ExpectPreTrade(const string name, const double equity, const double worst_loss, const bool expect_ok)
+  {
+   string why;
+   //--- balance ต้นวัน 10,000, daily loss 3% -> limit 9,700
+   bool ok = g_risk.PreTradeOk(equity, worst_loss, 10000.0, 3.0, why);
+   Check(ok == expect_ok, StringFormat("D4 %s : equity %.2f worst %.2f -> %s (คาด %s) %s", name, equity, worst_loss,
+                                       ok ? "อนุญาต" : "ปฏิเสธ", expect_ok ? "อนุญาต" : "ปฏิเสธ", why));
+   Check(ok || why != "", "D4 " + name + " : ปฏิเสธต้องมีเหตุผล");
+  }
+
+void RunPreTradeCases()
+  {
+   ExpectPreTrade("เริ่มวัน",            10000.0, 100.0, true);    // 9,900 > 9,700
+   ExpectPreTrade("ขอบพอดี = ปฏิเสธ",     9800.0, 100.0, false);   // 9,700 <= 9,700
+   ExpectPreTrade("เหลือเผื่อ",           9850.0, 100.0, true);    // 9,750 > 9,700
+   ExpectPreTrade("ทะลุ limit",           9750.0, 100.0, false);   // 9,650
+   ExpectPreTrade("-2.5% แล้วเสี่ยง 1%",  9750.0, 97.5,  false);   // กรณีใน ADR: -2.5% + 1% = -3.5%
+   ExpectPreTrade("equity = limit",       9700.0, 0.0,   false);   // breaker อยู่แล้ว
+   ExpectPreTrade("กำไรวันนี้",          10500.0, 105.0, true);    // limit อิง balance ต้นวัน ไม่ใช่ equity
+  }
+
+//+------------------------------------------------------------------+
 //| ชุด B: ตลาดจริง — เทียบกับ OrderCalcProfit ของ broker               |
 //+------------------------------------------------------------------+
 void RunLiveSymbol(const string sym)
@@ -135,7 +159,9 @@ void RunLiveSymbol(const string sym)
       if(!ok)
         {
          //--- ข้ามไม้ถูกต้อง (ต่ำกว่า min / margin ไม่พอ) ต้องได้ lot = 0 และมีเหตุผล
-         Check(lot == 0.0 && why != "", StringFormat("%s SL %.2f%% : ข้ามไม้ (%s)", sym, pct[i], why));
+         //--- ต้องเป็นเหตุผลที่คาดไว้เท่านั้น (ไม่ใช่ fail closed/D4 ที่ผิดปกติ)
+         bool expected_reason = (StringFind(why, "ต่ำกว่า volume_min") >= 0 || StringFind(why, "margin ไม่พอ") >= 0);
+         Check(lot == 0.0 && expected_reason, StringFormat("%s SL %.2f%% : ข้ามไม้ (%s)", sym, pct[i], why));
          continue;
         }
 
@@ -162,6 +188,9 @@ void OnStart()
    g_log.Init("RiskSelfTest", 0, LOG_INFO);
    g_log.Info("== ชุด A: ตัวเลขตายตัว ==");
    RunFixedCases();
+
+   g_log.Info("== ชุด D4: pre-trade daily limit ==");
+   RunPreTradeCases();
 
    g_log.Info("== ชุด B: ตลาดจริงของ broker ==");
    string list[];

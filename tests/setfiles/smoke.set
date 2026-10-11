@@ -4,6 +4,6 @@ InpRiskPct=1.0
 InpDailyLossPct=3.0
 InpMaxPositions=1
 InpCommissionPerLot=7.0
-InpMaxSpreadPoints=0
+InpMaxSpreadPoints=20
 InpDeviationPoints=20
 InpLogLevel=1

@@ -17,6 +17,8 @@ private:
    ulong     m_magic;
    CLogger  *m_log;
    bool      m_ready;
+   double    m_last_fill;     // ราคา fill ของ Open ล่าสุดที่สำเร็จ
+   double    m_last_sl;       // SL (normalized) ที่ส่งไปกับ Open ล่าสุด
 
    double    NormPrice(const double price) const;
    bool      ValidateStops(const ENUM_SIGNAL_DIR dir, const double sl, const double tp, string &why) const;
@@ -24,12 +26,17 @@ private:
    bool      IsSuccess(const uint retcode) const;
 
 public:
-             CTradeManager() : m_symbol(""), m_magic(0), m_log(NULL), m_ready(false) {}
+             CTradeManager() : m_symbol(""), m_magic(0), m_log(NULL), m_ready(false), m_last_fill(0), m_last_sl(0) {}
 
    bool      Init(const string symbol, const ulong magic, CLogger *log, const uint deviation_points);
 
+   //--- ส่ง order ครั้งเดียว (D5: ไม่ retry ในนี้ — ผู้เรียกคำนวณราคา/SL/lot ใหม่ผ่าน RiskManager แล้วเรียกซ้ำ)
    //--- sl ต้อง != 0 และถูกฝั่ง/ห่างพอ ไม่งั้นไม่ส่ง; tp = 0 คือไม่มี TP
-   bool      Open(const ENUM_SIGNAL_DIR dir, const double lot, const double sl, const double tp, const string comment);
+   //--- retryable = true เมื่อ retcode เป็น REQUOTE / PRICE_CHANGED / PRICE_OFF
+   bool      Open(const ENUM_SIGNAL_DIR dir, const double lot, const double sl, const double tp, const string comment,
+                  bool &retryable);
+   double    LastFillPrice() const { return(m_last_fill); }
+   double    LastSl() const { return(m_last_sl); }
    bool      CloseAll(const string why);
    int       CountPositions() const;      // กรอง magic + symbol
   };
@@ -141,8 +148,11 @@ bool CTradeManager::IsSuccess(const uint retcode) const
 
 //+------------------------------------------------------------------+
 bool CTradeManager::Open(const ENUM_SIGNAL_DIR dir, const double lot, const double sl_in, const double tp_in,
-                         const string comment)
+                         const string comment, bool &retryable)
   {
+   retryable   = false;
+   m_last_fill = 0.0;
+   m_last_sl   = 0.0;
    if(!m_ready || m_log == NULL)
       return(false);
    if(lot <= 0.0)
@@ -155,40 +165,37 @@ bool CTradeManager::Open(const ENUM_SIGNAL_DIR dir, const double lot, const doub
    const double tp   = (tp_in > 0.0) ? NormPrice(tp_in) : 0.0;
    const string side = (dir == SIGNAL_BUY) ? "BUY" : "SELL";
 
-   const int max_retry = 2;
-   for(int attempt = 0; attempt <= max_retry; attempt++)
+   string why;
+   if(!ValidateStops(dir, sl, tp, why))
      {
-      string why;
-      if(!ValidateStops(dir, sl, tp, why))
-        {
-         m_log.Trade("REJECT", StringFormat("%s lot=%.2f sl=%.5f tp=%.5f : %s", side, lot, sl, tp, why));
-         return(false);
-        }
-
-      //--- SL + magic ไปพร้อม order ตั้งแต่ครั้งแรก (price = 0 -> ราคาตลาดปัจจุบัน)
-      bool sent = (dir == SIGNAL_BUY) ? m_trade.Buy(lot, m_symbol, 0.0, sl, tp, comment)
-                                      : m_trade.Sell(lot, m_symbol, 0.0, sl, tp, comment);
-      uint rc = m_trade.ResultRetcode();
-
-      if(sent && IsSuccess(rc))
-        {
-         m_log.Trade("OPEN", StringFormat("%s lot=%.2f price=%.5f sl=%.5f tp=%.5f deal=%I64u [%s]",
-                                          side, lot, m_trade.ResultPrice(), sl, tp, m_trade.ResultDeal(), comment));
-         return(true);
-        }
-
-      if(IsRetryable(rc) && attempt < max_retry)
-        {
-         m_log.Warn(StringFormat("%s retcode=%u (%s) ลองใหม่ %d/%d", side, rc, m_trade.ResultRetcodeDescription(),
-                                 attempt + 1, max_retry));
-         continue;
-        }
-
-      m_log.Trade("REJECT", StringFormat("%s lot=%.2f sl=%.5f : send=%s retcode=%u (%s)",
-                                         side, lot, sl, sent ? "true" : "false", rc,
-                                         m_trade.ResultRetcodeDescription()));
+      m_log.Trade("REJECT", StringFormat("%s lot=%.2f sl=%.5f tp=%.5f : %s", side, lot, sl, tp, why));
       return(false);
      }
+
+   //--- SL + magic ไปพร้อม order ตั้งแต่ครั้งแรก (price = 0 -> ราคาตลาดปัจจุบัน)
+   bool sent = (dir == SIGNAL_BUY) ? m_trade.Buy(lot, m_symbol, 0.0, sl, tp, comment)
+                                   : m_trade.Sell(lot, m_symbol, 0.0, sl, tp, comment);
+   uint rc = m_trade.ResultRetcode();
+
+   if(sent && IsSuccess(rc))
+     {
+      m_last_fill = m_trade.ResultPrice();
+      m_last_sl   = sl;
+      m_log.Trade("OPEN", StringFormat("%s lot=%.2f price=%.5f sl=%.5f tp=%.5f deal=%I64u [%s]",
+                                       side, lot, m_last_fill, sl, tp, m_trade.ResultDeal(), comment));
+      return(true);
+     }
+
+   retryable = IsRetryable(rc);
+   if(retryable)
+     {
+      m_log.Warn(StringFormat("%s retcode=%u (%s) — ขอคำนวณราคา/SL/lot ใหม่", side, rc, m_trade.ResultRetcodeDescription()));
+      return(false);
+     }
+
+   m_log.Trade("REJECT", StringFormat("%s lot=%.2f sl=%.5f : send=%s retcode=%u (%s)",
+                                      side, lot, sl, sent ? "true" : "false", rc,
+                                      m_trade.ResultRetcodeDescription()));
    return(false);
   }
 

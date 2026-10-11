@@ -35,6 +35,8 @@ private:
    datetime  ServerDayStart() const;
    bool      CalcDayStartBalance(const datetime day_start, double &balance_out) const;
    int       CountPositions() const;
+   int       CountSymbolPositions() const;   // ทุก magic (ใช้กับบัญชี netting - D6)
+   bool      IsNettingAccount() const;
    int       StepDigits(const double step) const;
 
 public:
@@ -57,6 +59,15 @@ public:
    bool      ComputeLot(const double risk_money, const double loss_per_lot, const double commission,
                         const double vmin, const double vmax, const double vstep,
                         double &lot, string &why) const;
+
+   //--- D4: สูตรล้วน — ไม่เปิดไม้ถ้าโดน SL แล้ว equity จะ <= limit รายวัน
+   //--- worst_loss = (loss_per_lot + commission) * lot ; limit = day_balance * (1 - daily_loss_pct/100)
+   bool      PreTradeOk(const double equity, const double worst_loss, const double day_balance,
+                        const double daily_loss_pct, string &why) const;
+
+   //--- D5: risk จริงหลัง fill = -OrderCalcProfit(fill, sl) * volume + commission * volume
+   bool      ActualRisk(const ENUM_SIGNAL_DIR dir, const double volume, const double fill_price,
+                        const double sl, double &risk_money, double &risk_pct_equity) const;
 
    //--- จับ balance ต้นวันใหม่ + ปลด breaker
    void      OnNewDay();
@@ -108,6 +119,9 @@ bool CRiskManager::Init(const string symbol, const ulong magic, CLogger *log,
    OnNewDay();
    m_log.Info(StringFormat("Risk init: risk=%.2f%% dailyLoss=%.2f%% maxPos=%d commission=%.2f/lot maxSpread=%d",
                            m_risk_pct, m_daily_loss_pct, m_max_positions, m_commission, m_max_spread));
+   //--- D6: netting รวม position ต่าง magic เป็นตัวเดียว -> fail closed (ดู CanOpen)
+   if(IsNettingAccount())
+      m_log.Warn("บัญชีเป็น NETTING: ถ้ามี position ของ symbol นี้อยู่แล้ว (ทุก magic) จะไม่เปิดไม้ — ใช้บัญชี hedging เป็นหลัก");
    return(true);
   }
 
@@ -190,12 +204,73 @@ int CRiskManager::CountPositions() const
   }
 
 //+------------------------------------------------------------------+
+int CRiskManager::CountSymbolPositions() const
+  {
+   int n = 0;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+     {
+      if(PositionGetSymbol(i) == m_symbol)
+         n++;
+     }
+   return(n);
+  }
+
+//+------------------------------------------------------------------+
+bool CRiskManager::IsNettingAccount() const
+  {
+   ENUM_ACCOUNT_MARGIN_MODE mm = (ENUM_ACCOUNT_MARGIN_MODE)AccountInfoInteger(ACCOUNT_MARGIN_MODE);
+   return(mm != ACCOUNT_MARGIN_MODE_RETAIL_HEDGING);
+  }
+
+//+------------------------------------------------------------------+
+bool CRiskManager::PreTradeOk(const double equity, const double worst_loss, const double day_balance,
+                              const double daily_loss_pct, string &why) const
+  {
+   why = "";
+   double limit = day_balance * (1.0 - daily_loss_pct / 100.0);
+   if(equity - worst_loss <= limit)
+     {
+      why = StringFormat("D4 pre-trade: ถ้าโดน SL equity %.2f - %.2f = %.2f <= limit รายวัน %.2f (balance ต้นวัน %.2f, %.2f%%)",
+                         equity, worst_loss, equity - worst_loss, limit, day_balance, daily_loss_pct);
+      return(false);
+     }
+   return(true);
+  }
+
+//+------------------------------------------------------------------+
+bool CRiskManager::ActualRisk(const ENUM_SIGNAL_DIR dir, const double volume, const double fill_price,
+                              const double sl, double &risk_money, double &risk_pct_equity) const
+  {
+   risk_money      = 0.0;
+   risk_pct_equity = 0.0;
+   if(!m_ready || volume <= 0.0 || fill_price <= 0.0 || sl <= 0.0 || dir == SIGNAL_NONE)
+      return(false);
+
+   double pl = 0.0;
+   if(!OrderCalcProfit((dir == SIGNAL_BUY) ? ORDER_TYPE_BUY : ORDER_TYPE_SELL, m_symbol, volume, fill_price, sl, pl))
+      return(false);
+
+   risk_money = -pl + m_commission * volume;
+   double equity = AccountInfoDouble(ACCOUNT_EQUITY);
+   risk_pct_equity = (equity > 0.0) ? risk_money / equity * 100.0 : 0.0;
+   return(true);
+  }
+
+//+------------------------------------------------------------------+
 bool CRiskManager::CanOpen(string &why)
   {
    why = "";
    if(!m_ready)
      {
       why = "RiskManager ยังไม่ Init";
+      return(false);
+     }
+
+   //--- terminal หลุดจาก server -> ราคา/ข้อมูลบัญชีอาจเก่า (นอก tester เท่านั้น)
+   if(!MQLInfoInteger(MQL_TESTER) && !MQLInfoInteger(MQL_OPTIMIZATION) &&
+      !TerminalInfoInteger(TERMINAL_CONNECTED))
+     {
+      why = "terminal ไม่ได้เชื่อมต่อ server (fail closed)";
       return(false);
      }
 
@@ -229,6 +304,7 @@ bool CRiskManager::CanOpen(string &why)
       m_halted = true;
       why = StringFormat("daily loss breaker: equity %.2f <= %.2f (balance ต้นวัน %.2f, %.2f%%)",
                          equity, limit, m_day_balance, m_daily_loss_pct);
+      m_log.Warn(why);     // latch ครั้งเดียวต่อวัน — ให้เห็นใน journal ของ tester (Debug ถูกปิด)
       return(false);
      }
 
@@ -237,6 +313,17 @@ bool CRiskManager::CanOpen(string &why)
      {
       why = StringFormat("มี position ครบ %d/%d แล้ว", pos, m_max_positions);
       return(false);
+     }
+
+   //--- D6: netting — position ของ symbol นี้ทุก magic รวมเป็นตัวเดียว ห้ามเปิดทับ
+   if(IsNettingAccount())
+     {
+      int sym_pos = CountSymbolPositions();
+      if(sym_pos > 0)
+        {
+         why = StringFormat("netting: มี position ของ %s อยู่แล้ว %d (ทุก magic) — ไม่เปิด", m_symbol, sym_pos);
+         return(false);
+        }
      }
 
    if(m_max_spread > 0)
@@ -333,6 +420,20 @@ bool CRiskManager::CalcLot(const SSignalIntent &intent, const double entry, doub
 
    if(!ComputeLot(risk_money, loss_per_lot, m_commission, vmin, vmax, vstep, lot, why))
       return(false);
+
+   //--- D4: ถ้าโดน SL (รวม commission) แล้วทะลุ daily limit -> ปฏิเสธ ไม่ลด lot
+   if(!m_balance_ok)
+     {
+      lot = 0.0;
+      why = "ไม่รู้ balance ต้นวัน (fail closed)";
+      return(false);
+     }
+   double worst_loss = (loss_per_lot + m_commission) * lot;
+   if(!PreTradeOk(equity, worst_loss, m_day_balance, m_daily_loss_pct, why))
+     {
+      lot = 0.0;
+      return(false);
+     }
 
    //--- margin พอไหม
    double margin = 0.0;

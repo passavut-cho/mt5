@@ -104,6 +104,8 @@ void OnDeinit(const int reason)
    g_log.Info(StringFormat("deinit reason=%d", reason));
   }
 
+void OpenWithRetry(const SSignalIntent &intent);
+
 //+------------------------------------------------------------------+
 //| Flow ต่อแท่งใหม่: Risk.CanOpen -> Signal -> Risk.CalcLot -> Trade  |
 //+------------------------------------------------------------------+
@@ -129,28 +131,61 @@ void OnTick()
    if(intent.dir == SIGNAL_NONE)
       return;
 
-   MqlTick tick;
-   if(!SymbolInfoTick(_Symbol, tick))
+   OpenWithRetry(intent);
+  }
+
+//+------------------------------------------------------------------+
+//| D5: ทุก attempt (สูงสุด 1 + 2 retry) refresh ราคา -> CanOpen ->     |
+//| CalcLot (SL/lot/D4 ใหม่ผ่าน RiskManager) -> Open แล้ว log risk จริง |
+//+------------------------------------------------------------------+
+void OpenWithRetry(const SSignalIntent &intent)
+  {
+   const int max_retry = 2;
+   const bool buy = (intent.dir == SIGNAL_BUY);
+
+   for(int attempt = 0; attempt <= max_retry; attempt++)
      {
-      g_log.Error(StringFormat("SymbolInfoTick ล้มเหลว err=%d", GetLastError()));
-      return;
+      string why;
+      if(attempt > 0 && !g_risk.CanOpen(why))      // attempt แรกผ่าน CanOpen มาแล้วใน OnTick
+        {
+         g_log.Trade("REJECT", StringFormat("%s : retry %d : %s", intent.reason, attempt, why));
+         return;
+        }
+
+      MqlTick tick;
+      if(!SymbolInfoTick(_Symbol, tick) || tick.ask <= 0.0 || tick.bid <= 0.0)
+        {
+         g_log.Error(StringFormat("SymbolInfoTick ล้มเหลว err=%d", GetLastError()));
+         return;
+        }
+      double entry = buy ? tick.ask : tick.bid;
+
+      double lot = 0.0;
+      if(!g_risk.CalcLot(intent, entry, lot, why))
+        {
+         g_log.Trade("REJECT", StringFormat("%s : %s", intent.reason, why));
+         return;
+        }
+
+      double sl = buy ? entry - intent.sl_distance : entry + intent.sl_distance;
+      double tp = 0.0;
+      if(intent.tp_distance > 0.0)
+         tp = buy ? entry + intent.tp_distance : entry - intent.tp_distance;
+
+      bool retryable = false;
+      if(g_trade.Open(intent.dir, lot, sl, tp, intent.reason, retryable))
+        {
+         double risk_money = 0.0, risk_pct = 0.0;
+         if(g_risk.ActualRisk(intent.dir, lot, g_trade.LastFillPrice(), g_trade.LastSl(), risk_money, risk_pct))
+            g_log.Trade("RISK", StringFormat("actual_risk=%.2f (%.3f%% ของ equity) lot=%.2f fill=%.5f sl=%.5f",
+                                             risk_money, risk_pct, lot, g_trade.LastFillPrice(), g_trade.LastSl()));
+         else
+            g_log.Warn("คำนวณ actual_risk หลัง fill ไม่ได้");
+         return;
+        }
+      if(!retryable)
+         return;
      }
-
-   bool   buy   = (intent.dir == SIGNAL_BUY);
-   double entry = buy ? tick.ask : tick.bid;
-
-   double lot = 0.0;
-   if(!g_risk.CalcLot(intent, entry, lot, why))
-     {
-      g_log.Trade("REJECT", StringFormat("%s : %s", intent.reason, why));
-      return;
-     }
-
-   double sl = buy ? entry - intent.sl_distance : entry + intent.sl_distance;
-   double tp = 0.0;
-   if(intent.tp_distance > 0.0)
-      tp = buy ? entry + intent.tp_distance : entry - intent.tp_distance;
-
-   g_trade.Open(intent.dir, lot, sl, tp, intent.reason);
+   g_log.Trade("REJECT", StringFormat("%s : retry ครบ %d ครั้งแล้วยังไม่สำเร็จ", intent.reason, max_retry));
   }
 //+------------------------------------------------------------------+
