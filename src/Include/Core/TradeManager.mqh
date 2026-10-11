@@ -1,0 +1,240 @@
+﻿//+------------------------------------------------------------------+
+//|                                                 TradeManager.mqh |
+//|  ชั้น Execution: ห่อ CTrade — ส่ง order พร้อม SL + magic เสมอ       |
+//+------------------------------------------------------------------+
+#ifndef SMARTEA_CORE_TRADEMANAGER_MQH
+#define SMARTEA_CORE_TRADEMANAGER_MQH
+
+#include <Trade/Trade.mqh>
+#include "Types.mqh"
+#include "Logger.mqh"
+
+class CTradeManager
+  {
+private:
+   CTrade    m_trade;
+   string    m_symbol;
+   ulong     m_magic;
+   CLogger  *m_log;
+   bool      m_ready;
+
+   double    NormPrice(const double price) const;
+   bool      ValidateStops(const ENUM_SIGNAL_DIR dir, const double sl, const double tp, string &why) const;
+   bool      IsRetryable(const uint retcode) const;
+   bool      IsSuccess(const uint retcode) const;
+
+public:
+             CTradeManager() : m_symbol(""), m_magic(0), m_log(NULL), m_ready(false) {}
+
+   bool      Init(const string symbol, const ulong magic, CLogger *log, const uint deviation_points);
+
+   //--- sl ต้อง != 0 และถูกฝั่ง/ห่างพอ ไม่งั้นไม่ส่ง; tp = 0 คือไม่มี TP
+   bool      Open(const ENUM_SIGNAL_DIR dir, const double lot, const double sl, const double tp, const string comment);
+   bool      CloseAll(const string why);
+   int       CountPositions() const;      // กรอง magic + symbol
+  };
+
+//+------------------------------------------------------------------+
+bool CTradeManager::Init(const string symbol, const ulong magic, CLogger *log, const uint deviation_points)
+  {
+   m_ready = false;
+   if(log == NULL)
+      return(false);
+   m_log = log;
+
+   if(!SymbolSelect(symbol, true))
+     {
+      m_log.Error(StringFormat("SymbolSelect(%s) ล้มเหลว err=%d", symbol, GetLastError()));
+      return(false);
+     }
+
+   m_symbol = symbol;
+   m_magic  = magic;
+
+   m_trade.SetExpertMagicNumber(magic);
+   m_trade.SetDeviationInPoints(deviation_points);
+   m_trade.SetTypeFillingBySymbol(symbol);
+   m_trade.SetAsyncMode(false);
+
+   m_ready = true;
+   return(true);
+  }
+
+//+------------------------------------------------------------------+
+double CTradeManager::NormPrice(const double price) const
+  {
+   int    digits = (int)SymbolInfoInteger(m_symbol, SYMBOL_DIGITS);
+   double tick   = SymbolInfoDouble(m_symbol, SYMBOL_TRADE_TICK_SIZE);
+   if(tick > 0.0)
+      return(NormalizeDouble(MathRound(price / tick) * tick, digits));
+   return(NormalizeDouble(price, digits));
+  }
+
+//+------------------------------------------------------------------+
+//| SL ต้อง != 0, ถูกฝั่ง, ห่างราคา >= STOPS_LEVEL; TP (ถ้ามี) ก็เช่นกัน |
+//+------------------------------------------------------------------+
+bool CTradeManager::ValidateStops(const ENUM_SIGNAL_DIR dir, const double sl, const double tp, string &why) const
+  {
+   why = "";
+   if(sl <= 0.0)
+     {
+      why = "ไม่มี SL";
+      return(false);
+     }
+
+   MqlTick tick;
+   if(!SymbolInfoTick(m_symbol, tick) || tick.ask <= 0.0 || tick.bid <= 0.0)
+     {
+      why = StringFormat("อ่านราคาไม่ได้ err=%d", GetLastError());
+      return(false);
+     }
+
+   double point = SymbolInfoDouble(m_symbol, SYMBOL_POINT);
+   double level = (double)SymbolInfoInteger(m_symbol, SYMBOL_TRADE_STOPS_LEVEL) * point;
+
+   if(dir == SIGNAL_BUY)
+     {
+      if(sl > tick.bid - level)
+        {
+         why = StringFormat("SL %.5f ต้อง <= bid-stops_level (%.5f)", sl, tick.bid - level);
+         return(false);
+        }
+      if(tp > 0.0 && tp < tick.bid + level)
+        {
+         why = StringFormat("TP %.5f ต้อง >= bid+stops_level (%.5f)", tp, tick.bid + level);
+         return(false);
+        }
+     }
+   else if(dir == SIGNAL_SELL)
+     {
+      if(sl < tick.ask + level)
+        {
+         why = StringFormat("SL %.5f ต้อง >= ask+stops_level (%.5f)", sl, tick.ask + level);
+         return(false);
+        }
+      if(tp > 0.0 && tp > tick.ask - level)
+        {
+         why = StringFormat("TP %.5f ต้อง <= ask-stops_level (%.5f)", tp, tick.ask - level);
+         return(false);
+        }
+     }
+   else
+     {
+      why = "ทิศทางไม่ถูกต้อง";
+      return(false);
+     }
+   return(true);
+  }
+
+//+------------------------------------------------------------------+
+bool CTradeManager::IsRetryable(const uint retcode) const
+  {
+   return(retcode == TRADE_RETCODE_REQUOTE ||
+          retcode == TRADE_RETCODE_PRICE_CHANGED ||
+          retcode == TRADE_RETCODE_PRICE_OFF);
+  }
+
+bool CTradeManager::IsSuccess(const uint retcode) const
+  {
+   return(retcode == TRADE_RETCODE_DONE || retcode == TRADE_RETCODE_DONE_PARTIAL);
+  }
+
+//+------------------------------------------------------------------+
+bool CTradeManager::Open(const ENUM_SIGNAL_DIR dir, const double lot, const double sl_in, const double tp_in,
+                         const string comment)
+  {
+   if(!m_ready || m_log == NULL)
+      return(false);
+   if(lot <= 0.0)
+     {
+      m_log.Trade("REJECT", StringFormat("lot=%.2f ไม่ถูกต้อง", lot));
+      return(false);
+     }
+
+   const double sl   = NormPrice(sl_in);
+   const double tp   = (tp_in > 0.0) ? NormPrice(tp_in) : 0.0;
+   const string side = (dir == SIGNAL_BUY) ? "BUY" : "SELL";
+
+   const int max_retry = 2;
+   for(int attempt = 0; attempt <= max_retry; attempt++)
+     {
+      string why;
+      if(!ValidateStops(dir, sl, tp, why))
+        {
+         m_log.Trade("REJECT", StringFormat("%s lot=%.2f sl=%.5f tp=%.5f : %s", side, lot, sl, tp, why));
+         return(false);
+        }
+
+      //--- SL + magic ไปพร้อม order ตั้งแต่ครั้งแรก (price = 0 -> ราคาตลาดปัจจุบัน)
+      bool sent = (dir == SIGNAL_BUY) ? m_trade.Buy(lot, m_symbol, 0.0, sl, tp, comment)
+                                      : m_trade.Sell(lot, m_symbol, 0.0, sl, tp, comment);
+      uint rc = m_trade.ResultRetcode();
+
+      if(sent && IsSuccess(rc))
+        {
+         m_log.Trade("OPEN", StringFormat("%s lot=%.2f price=%.5f sl=%.5f tp=%.5f deal=%I64u [%s]",
+                                          side, lot, m_trade.ResultPrice(), sl, tp, m_trade.ResultDeal(), comment));
+         return(true);
+        }
+
+      if(IsRetryable(rc) && attempt < max_retry)
+        {
+         m_log.Warn(StringFormat("%s retcode=%u (%s) ลองใหม่ %d/%d", side, rc, m_trade.ResultRetcodeDescription(),
+                                 attempt + 1, max_retry));
+         continue;
+        }
+
+      m_log.Trade("REJECT", StringFormat("%s lot=%.2f sl=%.5f : send=%s retcode=%u (%s)",
+                                         side, lot, sl, sent ? "true" : "false", rc,
+                                         m_trade.ResultRetcodeDescription()));
+      return(false);
+     }
+   return(false);
+  }
+
+//+------------------------------------------------------------------+
+int CTradeManager::CountPositions() const
+  {
+   int n = 0;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+     {
+      if(PositionGetSymbol(i) != m_symbol)
+         continue;
+      if((ulong)PositionGetInteger(POSITION_MAGIC) != m_magic)
+         continue;
+      n++;
+     }
+   return(n);
+  }
+
+//+------------------------------------------------------------------+
+bool CTradeManager::CloseAll(const string why)
+  {
+   if(!m_ready)
+      return(false);
+
+   bool all_ok = true;
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+     {
+      ulong ticket = PositionGetTicket(i);
+      if(ticket == 0)
+         continue;
+      if(PositionGetString(POSITION_SYMBOL) != m_symbol || (ulong)PositionGetInteger(POSITION_MAGIC) != m_magic)
+         continue;
+
+      bool ok = m_trade.PositionClose(ticket);
+      uint rc = m_trade.ResultRetcode();
+      if(ok && IsSuccess(rc))
+         m_log.Trade("CLOSE", StringFormat("ticket=%I64u price=%.5f : %s", ticket, m_trade.ResultPrice(), why));
+      else
+        {
+         all_ok = false;
+         m_log.Error(StringFormat("CLOSE ticket=%I64u ล้มเหลว retcode=%u (%s)", ticket, rc,
+                                  m_trade.ResultRetcodeDescription()));
+        }
+     }
+   return(all_ok);
+  }
+
+#endif
+//+------------------------------------------------------------------+
