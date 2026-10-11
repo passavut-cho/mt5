@@ -79,7 +79,7 @@ void TestLotCase(CRiskManager &rm, const string sym, const ENUM_SIGNAL_DIR dir,
    double vmin       = SymbolInfoDouble(sym, SYMBOL_VOLUME_MIN);
    double vmax       = SymbolInfoDouble(sym, SYMBOL_VOLUME_MAX);
    double vstep      = SymbolInfoDouble(sym, SYMBOL_VOLUME_STEP);
-   if(tick_size <= 0.0 || tick_value <= 0.0)
+   if(tick_size <= 0.0 || tick_value <= 0.0 || vstep <= 0.0)
      {
       Check(false, label, "tick size/value unavailable");
       return;
@@ -125,12 +125,17 @@ void TestProfitFormulas(const string sym, const double ask, const double sl_dist
    double tick_size  = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_SIZE);
    double tick_value = SymbolInfoDouble(sym, SYMBOL_TRADE_TICK_VALUE);
    double profit     = 0.0;
-   if(!OrderCalcProfit(ORDER_TYPE_BUY, sym, 1.0, ask, ask - sl_dist, profit) || tick_size <= 0.0)
+   if(!OrderCalcProfit(ORDER_TYPE_BUY, sym, 1.0, ask, ask - sl_dist, profit) || tick_size <= 0.0 || tick_value <= 0.0)
      {
       Check(false, sym + " OrderCalcProfit vs tick value", "OrderCalcProfit failed");
       return;
      }
    double by_tick = sl_dist / tick_size * tick_value;
+   if(by_tick <= 0.0)
+     {
+      Check(false, sym + " OrderCalcProfit vs tick value", "tick formula gave 0");
+      return;
+     }
    double diff    = MathAbs(-profit - by_tick) / by_tick * 100.0;
    Check(-profit > 0.0 && diff <= InpTolerancePct, sym + " OrderCalcProfit vs tick value",
          StringFormat("calc=%.2f tick=%.2f diff=%.3f%%", -profit, by_tick, diff));
