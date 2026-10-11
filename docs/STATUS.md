@@ -31,11 +31,13 @@
 1b. ✅ SymbolSpecDump v1.10 → `data/files/specs_ICMarketsSC-Demo.tsv` (HEDGING, 100 oz, spread p95 11 pts) — สรุปใน docs/research/broker-icmarkets.md
 2. ✅ SmartEA บน IC demo → `live guard: OK (DEMO)`
 2b. ✅ G1.3 (D4–D6 + connected guard) — ดูด้านบน
-3. G1.2: backtest 1 ปีด้วย CSignalNone (`core_smoke.ini`/`.set`) — ต้องสร้างไฟล์ก่อน (ยังไม่มี) และปิด MT5 ก่อนรัน • ต้องตั้ง hedging ใน tester ไม่งั้น netting guard จะกันไม้ซ้ำ
-4. ตรวจ journal: บรรทัด `New day ... breaker ที่ equity<=` ต้องมีค่าสมเหตุสมผล (day 1 ใน tester)
+3. ✅ G1.2 (T-003, 2026-10-12): core_smoke XAUUSD M15 2024 → 0 trades, final 10000, SmartEA ERROR/CRITICAL = 0 • report `data/reports/SmartEA_core_smoke.htm` + `.summary.md`
+4. ✅ journal: `New day 2024.01.01: balance ต้นวัน=10000.00 breaker ที่ equity<=9700.00`
 5. `/gate`
 
 ## Blockers / Open questions
+- ⚠️ report core_smoke แสดง leverage **1:100** ทั้งที่ `core_smoke.ini` ตั้ง `Leverage=500` (smoke.ini ก็เหมือนกัน) → tester ไม่รับ Leverage จาก ini หรือใช้ค่าของ account — ต้องตรวจก่อน T-008 (margin มีผลต่อ lot ทอง)
+- ℹ️ Model=1 ใช้ได้เฉพาะ smoke; gate Phase 3+ ต้อง real ticks (Model=4)
 - ⚠️ IC demo balance = **500 USD** (จาก RiskSelfTest ชุด B) → ที่ risk 1% ทองเปิดไม้ไม่ได้ถ้า SL ≥ ~$5 (lot < 0.01) → T-006 ให้ Owner ตั้งเป็น 10,000 ก่อน Phase 5
 - ✅ Spec EMA+ADX v1 APPROVED (S1–S8) — implement ได้หลัง `/gate` Phase 1 (T-007)
 - ✅ D4–D7 อนุมัติตามข้อเสนอ (ADR 0002 addendum) → Claude Code implement ด้วย goal G1.3 • D7 = 20 points
