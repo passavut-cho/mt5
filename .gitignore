@@ -13,3 +13,6 @@ scripts/config.local.ps1
 # python
 __pycache__/
 .venv/
+
+# SymbolSpecDump runs ที่ใช้ไม่ได้
+data/files/_invalid/

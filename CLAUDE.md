@@ -17,7 +17,7 @@
 
 ## ⛔ กฎเหล็ก (ห้ามฝ่าฝืนเด็ดขาด)
 1. **Live guard**: ทุก EA ต้องมี `input bool InpAllowLive = false;` — ใน `OnInit` ถ้า `ACCOUNT_TRADE_MODE == ACCOUNT_TRADE_MODE_REAL` และ `InpAllowLive == false` → `return INIT_FAILED` (Strategy Tester และ demo ทำงานได้ปกติ) ห้ามเขียนทางเลี่ยง guard นี้ในรูปแบบใดๆ
-2. **Risk ต่อไม้ ≤ 1% ของ equity รวม commission** (`InpCommissionPerLot` round turn) • **Max daily loss 3% ทั้งบัญชี**: equity (รวม floating) ≤ balance ต้นวัน (server time) × 97% → หยุดเปิดไม้ใหม่จนถึงวันถัดไป ไม้ที่เปิดอยู่ปล่อยให้ SL/TP ทำงาน (ADR 0002)
+2. **Risk ต่อไม้ ≤ 1% ของ equity รวม commission** (`InpCommissionPerLot` round turn) • **Max daily loss 3% ทั้งบัญชี**: equity (รวม floating) ≤ balance ต้นวัน (server time) × 97% → หยุดเปิดไม้ใหม่จนถึงวันถัดไป ไม้ที่เปิดอยู่ปล่อยให้ SL/TP ทำงาน • ห้ามเปิดไม้ที่ถ้าโดน SL แล้วจะทะลุ 3% (pre-trade check) (ADR 0002 D1–D4)
 3. **ห้าม martingale / grid / averaging down** — ห้ามเพิ่ม lot ตามผลไม้ก่อนหน้า ห้ามเปิดไม้เพิ่มทิศเดียวกันเพื่อเฉลี่ยราคา
 4. **ทุก order ต้องมี Stop Loss และ magic number** ตั้งแต่ตอนส่ง order (ไม่ใช่ modify ตามทีหลัง)
 5. **ห้าม hardcode** symbol, lot, timeframe, magic — ต้องเป็น input หรือมาจาก `_Symbol` / `_Period`
@@ -40,7 +40,24 @@
 - [ ] Backtest ผ่าน Strategy Tester ได้ report จริงใน `data/reports/`
 - [ ] `risk-guardian` → PASS และ `qa-reviewer` → ไม่มี issue ระดับ blocker
 - [ ] มี `.set` ใน `tests/setfiles/` และ `.ini` ใน `tests/tester-ini/`
-- [ ] อัปเดต `docs/STATUS.md` และ git commit อ้าง phase เช่น `[P1] add RiskManager daily loss breaker`
+- [ ] อัปเดต `docs/STATUS.md` แล้ว commit + push (ดูหัวข้อ Git)
+
+## Git — commit + push ทุกรอบงาน
+Remote: `origin` → github.com/passavut-cho/mt5 (branch `main`)
+1. จบทุกหน่วยงานที่เสร็จ (feature step, doc, fix) → `git add` เฉพาะไฟล์ที่เกี่ยวข้อง → commit → `git push origin main` **ทันที** ไม่ต้องรอถาม
+2. ก่อน commit ไฟล์ใน `src/`: `compile.ps1` ต้อง PASS (0/0) — ไม่ผ่าน = ห้าม commit โค้ดนั้น แก้ให้ผ่านก่อน
+3. แตะ Risk/Trade/Expert → ต้องได้ risk-guardian PASS ก่อน commit
+4. Message: `[P<n>] <type>: <สรุปสั้น>` type = feat / fix / docs / test / chore เช่น `[P1] feat: RiskManager daily loss breaker`
+5. เริ่ม session: `git status` — ถ้ามีไฟล์ค้างที่ Cowork แก้ไว้ (docs/, CLAUDE.md, .claude/) → commit แยกเป็น `[P<n>] docs: sync from Cowork` ก่อนเริ่มงาน
+6. push ไม่ผ่าน → `git pull --rebase` แล้ว push ใหม่ 1 ครั้ง ยังไม่ผ่าน → หยุด รายงานใน ⚠️ — **ห้าม force push, ห้าม reset --hard**
+7. ห้าม commit: `*.ex5`, `scripts/config.local.ps1`, log, report ดิบ (มีใน .gitignore แล้ว — ห้าม `git add -f`)
+8. ใส่ short hash ที่ push แล้วในรายงานท้ายรอบ (🎯)
+
+## /goal — ทำงานต่อเนื่อง
+`/goal` เป็นคำสั่ง built-in ของ Claude Code: หลังจบแต่ละ turn จะมี model อีกตัวตรวจว่า condition ครบหรือยัง ถ้ายัง Claude ทำต่อเอง
+- template ของแต่ละ Phase อยู่ใน `docs/goals.md` — ใช้ `/goal-plan` เพื่อให้ Claude ร่าง condition ของงานถัดไปจาก STATUS.md
+- evaluator **อ่านได้แค่ transcript** ไม่ได้รันคำสั่งเอง → ทุกหลักฐาน (ผล compile, verdict ของ agent, hash ที่ push) ต้องแสดงออกมาในคำตอบ
+- เจอเรื่องที่ต้องให้ Owner ตัดสิน (ค่า risk, spec กำกวม, เลื่อน Phase, การทดสอบที่ต้องเปิด MT5 ด้วยมือ) → หยุด, commit+push งานที่เสร็จแล้ว, รายงานใน ⚠️ ด้วยคำว่า `BLOCKED: ต้องให้ Owner ตัดสินใจ`
 
 ## Subagents (`.claude/agents/`)
 | Agent | ใช้เมื่อ |
@@ -51,7 +68,7 @@
 | `backtest-analyst` | ตีความ report, ตัดสิน gate ของ Phase 2–5 |
 | `qa-reviewer` | gate สุดท้ายก่อน commit feature |
 
-Commands: `/status` `/gate` `/compile` `/backtest <ini>`
+Commands: `/status` `/gate` `/compile` `/backtest <ini>` `/goal-plan` • built-in: `/goal`
 
 ## รูปแบบรายงานท้ายทุกรอบงาน
 ปิดทุกรอบงาน (ไม่ใช่คำถามสั้น) ด้วย block นี้ — header tag ฝั่งนี้คือ `Code`:
@@ -59,6 +76,7 @@ Commands: `/status` `/gate` `/compile` `/backtest <ini>`
 [Code · Phase <N>]
 🎯 ทำอะไรรอบนี้
 • <what was done>
+• commit `<short-hash>` pushed → origin/main
 📊 Progress
 • Phase <N> · <gate> · <✅ / 🔄 / ⏸️>
 💡 น่าสนใจ / คำแนะนำ     ← only if real

@@ -5,11 +5,11 @@
 //|  (Files\SmartEA เป็น junction เข้า repo: data\files\)              |
 //+------------------------------------------------------------------+
 #property copyright   "Phas"
-#property version     "1.00"
+#property version     "1.10"
 #property description "Dump account + symbol specifications (read-only, no trading)"
 #property script_show_inputs
 
-input string InpSymbols    = "";  // ว่าง = symbol ของ chart, หลายตัวคั่นด้วย , เช่น XAUUSD,EURUSD
+input string InpSymbols    = "XAUUSD";  // หลายตัวคั่นด้วย , เช่น XAUUSD,EURUSD • ว่าง = symbol ของ chart
 input int    InpSpreadDays = 7;   // จำนวนวันย้อนหลังสำหรับสถิติ spread (จากแท่ง M1)
 
 int g_file = INVALID_HANDLE;
@@ -153,6 +153,12 @@ bool DumpSymbol(const string sym)
 //+------------------------------------------------------------------+
 void OnStart()
   {
+   //--- ถ้ายังไม่ login / ไม่เชื่อมต่อ ค่าทุกตัวจะเป็น 0 หรือค่า default (เช่น margin_mode = NETTING) -> หยุดแทนการเขียนข้อมูลผิด
+   if(AccountInfoInteger(ACCOUNT_LOGIN) == 0 || TerminalInfoInteger(TERMINAL_CONNECTED) == 0)
+     {
+      Print("ABORT: terminal ยังไม่ได้ login หรือไม่ได้เชื่อมต่อ server - login บัญชี demo ให้มุมขวาล่างขึ้น connected แล้วรันใหม่");
+      return;
+     }
    string fname = "SmartEA\\specs_" + SafeName(AccountInfoString(ACCOUNT_SERVER)) + ".tsv";
    g_file = FileOpen(fname, FILE_WRITE | FILE_CSV | FILE_ANSI, '\t');
    if(g_file == INVALID_HANDLE)

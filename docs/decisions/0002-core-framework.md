@@ -122,3 +122,30 @@ public:
 - Signal ใหม่ = ไฟล์ใหม่ใน `Signals/` + 1 บรรทัดใน Expert — ไม่แตะ Core
 - RiskManager เป็นจุดเดียวที่มีตัวเลข risk → `settings.json` บังคับให้ถาม Owner ก่อนแก้
 - ต้องมี `RiskSelfTest.mq5` ทดสอบ CalcLot กับตัวเลขจริงของ broker (เทียบกับ `pl_per_lot_per_1.00_move` จาก SymbolSpecDump)
+
+---
+
+## Addendum 2026-10-12 — จาก review ของ implement รอบแรก (commit 36d7e26)
+**Status:** Accepted — Owner อนุมัติ D4–D7 ตามข้อเสนอ 2026-10-12
+
+| # | ประเด็น | ตัวเลือก | ข้อเสนอ Cowork |
+|---|---|---|---|
+| D4 | Breaker เช็คแค่ equity ปัจจุบัน → ถ้า equity อยู่ที่ −2.5% แล้วเปิดไม้ risk 1% วันนั้นเสียได้ถึง −3.5% | (a) คงเดิม • (b) **pre-trade check**: ไม่เปิดไม้ถ้า `equity − risk_money_ของไม้นี้ (รวม commission) ≤ limit` | **(b)** — ทำให้ 3% เป็นเพดานจริง (เหลือแค่ gap/slippage) ไม่ลดค่า risk ใดๆ แค่ปฏิเสธไม้สุดท้ายที่จะทำให้ทะลุ |
+| D5 | Slippage/retry ทำให้ risk จริงเพี้ยนจาก 1% | (a) ยอมรับ ±เล็กน้อย • (b) ทุก retry คำนวณ lot + SL ใหม่จากราคาล่าสุด และจำกัด slippage ด้วย `InpDeviationPoints` | **(b)** + log `risk จริง = OrderCalcProfit(fill, sl)` หลัง fill เพื่อวัดความเพี้ยนใน Phase 5 |
+| D6 | บัญชี netting: position ต่าง magic บน symbol เดียวกันรวมเป็นตัวเดียว | (a) รองรับ netting • (b) **netting = ถ้ามี position ของ symbol นี้อยู่แล้วไม่ว่า magic ไหน → ไม่เปิด (fail closed)** และ log เตือนใน OnInit • (c) ปฏิเสธ netting ใน OnInit | **(b)** และใช้บัญชี demo แบบ **hedging** เป็นหลัก — หมายเหตุ: `specs_.tsv` ที่บอกว่า NETTING **ใช้ไม่ได้** เพราะรันตอนยังไม่ login (server/currency ว่าง, leverage 0) ต้องรัน SymbolSpecDump ใหม่ |
+| D7 | `InpMaxSpreadPoints = 0` (ไม่จำกัด) | (a) คง 0 • (b) ตั้งเพดานจากข้อมูลจริง | **(b)** — ตั้งค่าหลังได้ `spread_p95_pts` ของ XAUUSD จาก IC: เสนอ ≈ p95 × 1.5 (ตัวเลขสุดท้ายให้ Owner อนุมัติ) |
+
+เพิ่มเติม (technical, ไม่ต้องตัดสิน): `CanOpen()` ควรปฏิเสธเมื่อ `TERMINAL_CONNECTED == 0` (live/demo) — ใน tester ไม่มีผล
+
+### Owner decisions (2026-10-12)
+- **D4 = (b)** pre-trade check: `CanOpen`/`CalcLot` ปฏิเสธไม้ถ้า `equity − (loss_per_lot + commission) × lot ≤ day_start_balance × (1 − 3%)` — ทำให้ 3% เป็นเพดานจริง (ยกเว้น gap/slippage)
+- **D5 = (b)** ทุก retry: refresh ราคา → คำนวณ SL + lot ใหม่ผ่าน RiskManager; slippage จำกัดด้วย `InpDeviationPoints`; หลัง fill log `actual_risk = −OrderCalcProfit(fill_price, sl) × volume + commission × volume` และ % ของ equity
+- **D6 = (b)** บัญชี netting: ถ้ามี position ของ symbol นี้อยู่แล้ว (ทุก magic) → ไม่เปิด (fail closed) + `Warn` ใน OnInit ว่าเป็น netting; บัญชีหลักสำหรับทดสอบ = hedging
+- **D7 = (b)** `InpMaxSpreadPoints = 20` ใน `.set` ของ XAUUSD ทุกไฟล์ (รวม smoke) — default ในโค้ดคง 0 (ค่าต่อ symbol)
+- Technical: `CanOpen` ปฏิเสธเมื่อ `TERMINAL_CONNECTED == 0` (นอก tester)
+
+### D7 — ค่าที่อนุมัติ: `InpMaxSpreadPoints = 20` สำหรับ XAUUSD (Owner อนุมัติ 2026-10-12)
+ข้อมูล IC XAUUSD 7 วัน: median 6 • p95 11 • max 40 points (1 point = $0.01)
+- สูตร p95 × 1.5 = 16.5 → **เสนอปัดเป็น 20 points ($0.20)** เพราะ spread ในแท่ง M1 มักต่ำกว่า spread จริงตอน EA ส่ง order (EA ทำงานตอนเปิดแท่งใหม่ ซึ่งมักชนช่วงข่าว/rollover)
+- 20 ยังกันช่วง rollover/เปิดตลาด (40–50 points) ได้ และคิดเป็นแค่ ~4% ของ risk ต่อไม้ที่ SL $5 (0.19 lot × $20)
+- ใช้ใน `.set` ของ XAUUSD ทุกตัว — ค่า default ในโค้ด (0) ไม่แตะ เพราะเป็นค่าต่อ symbol

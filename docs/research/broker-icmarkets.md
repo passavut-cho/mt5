@@ -24,7 +24,23 @@
 - Commission $7/lot round turn ≈ 7% ของ risk ต่อไม้ที่ SL $5 → **ควรนับ commission เข้าไปใน 1% risk** (ADR 0002 · D3)
 - ต้องยืนยันจาก terminal: ชื่อ symbol, digits, stops level, filling mode, ประเภทบัญชี (hedging/netting), ความลึกของ history
 
-## ยังต้องเก็บ (รัน SymbolSpecDump)
-- [ ] spread จริง (avg / median / p95) ของ XAUUSD บน IC Raw demo
-- [ ] margin mode ของบัญชี
-- [ ] วันที่ของแท่ง M1 แรกบน server (ความลึก history สำหรับ Phase 3)
+## ยืนยันจาก terminal (SymbolSpecDump v1.10, 2026-10-12 03:15 เวลาไทย) — `data/files/specs_ICMarketsSC-Demo.tsv`
+| รายการ | ค่า | หมายเหตุ |
+|---|---|---|
+| Server / company | ICMarketsSC-Demo / Raw Trading Ltd | ยืนยัน entity Seychelles |
+| Margin mode | **RETAIL_HEDGING** | D6 netting guard เป็นแค่ safety net |
+| Leverage | 1:500 | backtest ini ใช้ 1:100 — ไม่กระทบ lot (คำนวณจาก risk) แต่ margin check ต่างกัน |
+| XAUUSD digits / point | 2 / 0.01 | 1 point = $0.01 ของราคา |
+| Contract / tick value | 100 oz / $1 ต่อ tick ต่อ lot | |
+| P/L ต่อ lot ต่อราคาขยับ $1 | −$100.00 | ตรงกับ spec sheet ✅ |
+| Volume min / step / max | 0.01 / 0.01 / 100 | |
+| Stops / freeze level | 0 / 0 | |
+| Filling | IOC only | CTrade.SetTypeFillingBySymbol จัดการแล้ว |
+| Swap long / short | −57.03 / +39.77 points ต่อ lot ต่อคืน | ≈ −$57 / +$40 ต่อ lot ต่อคืน (พุธ ×3) — ต้องนับใน spec ถ้าถือข้ามคืน |
+| Margin ต่อ lot | ~$839 | ที่ราคาประมาณ 4,195 |
+| M1 history แรกบน server | 1998-04-22 | แท่ง M1 ลึกพอ — tick history จริงยังไม่รู้ (ดูตอน Phase 3) |
+| Spread (แท่ง M1 7 วัน, 6,883 แท่ง) | avg 7.3 • median 6 • p95 11 • max 40 points | = $0.07 / $0.06 / $0.11 / $0.40 |
+| Spread ตอนรัน | 50 points | รันช่วงตลาดเพิ่งเปิด/rollover — spread กว้างผิดปกติ |
+
+ยังไม่ได้ยืนยัน: commission $7/lot (spec ไม่บอก commission) → ดูจาก deal แรกบน demo
+

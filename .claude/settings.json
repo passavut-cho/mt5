@@ -8,17 +8,31 @@
       "Bash(git log*)",
       "Bash(git add*)",
       "Bash(git commit*)",
-      "Bash(python tests/python/*)"
+      "Bash(python tests/python/*)",
+      "Bash(git push)",
+      "Bash(git push origin main)",
+      "Bash(git push -u origin main)",
+      "Bash(git pull --rebase*)",
+      "Bash(git rev-parse*)",
+      "Bash(git push origin main --tags)",
+      "Bash(git tag p*)"
     ],
     "ask": [
       "Edit(src/Include/Config/**)",
       "Write(src/Include/Config/**)",
       "Edit(src/Include/Core/RiskManager.mqh)",
-      "Write(src/Include/Core/RiskManager.mqh)",
-      "Bash(git push*)"
+      "Write(src/Include/Core/RiskManager.mqh)"
     ],
     "deny": [
-      "Read(scripts/config.local.ps1)"
+      "Read(scripts/config.local.ps1)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push origin +*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean*)",
+      "Bash(git rebase -i*)",
+      "Bash(git add -f*)",
+      "Bash(git add --force*)"
     ]
   }
 }

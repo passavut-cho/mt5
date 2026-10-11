@@ -1,0 +1,41 @@
+scope	key	value
+META	generated_local	2026.10.12 03:15:44
+ACCOUNT	server	ICMarketsSC-Demo
+ACCOUNT	company	Raw Trading Ltd
+ACCOUNT	trade_mode	ACCOUNT_TRADE_MODE_DEMO
+ACCOUNT	margin_mode	ACCOUNT_MARGIN_MODE_RETAIL_HEDGING
+ACCOUNT	currency	USD
+ACCOUNT	leverage	500
+ACCOUNT	stopout_mode	ACCOUNT_STOPOUT_MODE_PERCENT
+ACCOUNT	margin_call	100.00
+ACCOUNT	stop_out	50.00
+ACCOUNT	terminal_build	6255
+XAUUSD	description	Gold vs US Dollar
+XAUUSD	calc_mode	SYMBOL_CALC_MODE_FOREX
+XAUUSD	exec_mode	SYMBOL_TRADE_EXECUTION_MARKET
+XAUUSD	filling	IOC 
+XAUUSD	digits	2
+XAUUSD	point	0.01
+XAUUSD	contract_size	100.00
+XAUUSD	tick_size	0.01
+XAUUSD	tick_value	1.00000
+XAUUSD	volume_min	0.01
+XAUUSD	volume_max	100.00
+XAUUSD	volume_step	0.01
+XAUUSD	stops_level_pts	0
+XAUUSD	freeze_level_pts	0
+XAUUSD	spread_float	true
+XAUUSD	spread_now_pts	50
+XAUUSD	swap_mode	SYMBOL_SWAP_MODE_POINTS
+XAUUSD	swap_long	-57.03
+XAUUSD	swap_short	39.77
+XAUUSD	currency_profit	USD
+XAUUSD	currency_margin	XAU
+XAUUSD	pl_per_lot_per_1.00_move	-100.00
+XAUUSD	margin_per_lot	839.07
+XAUUSD	server_first_m1_bar	1998.04.22
+XAUUSD	spread_m1_bars	6883
+XAUUSD	spread_avg_pts	7.3
+XAUUSD	spread_median_pts	6
+XAUUSD	spread_p95_pts	11
+XAUUSD	spread_max_pts	40

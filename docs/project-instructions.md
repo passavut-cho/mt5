@@ -11,6 +11,8 @@
 - **Cowork** (claude.ai): วางแผน, เขียน/review spec และ ADR, วิเคราะห์ report backtest, ตอบคำถามเชิงแนวคิด, แก้ไฟล์ docs ผ่านเครื่องที่ link ไว้
 - **Code** (Claude Code บน Windows): implement MQL5, รัน compile.ps1 / run_backtest.ps1, เรียก subagents, commit
 - ทั้งสองฝั่งอ่าน `docs/STATUS.md` ก่อนเริ่ม และอัปเดตเมื่อจบงานที่เปลี่ยนสถานะ
+- **Git**: Code commit + push ไป `origin/main` (github.com/passavut-cho/mt5) ทุกรอบงาน; Cowork แก้ไฟล์แต่ไม่ commit — Code จะ sync เป็น `[P<n>] docs: sync from Cowork` ตอนเริ่ม session
+- **/goal**: งานยาวใน Code ใช้ `/goal` (template ใน `docs/goals.md`, ร่างด้วย `/goal-plan`) — Cowork ช่วยร่าง condition ได้
 
 ## กฎเหล็ก (ย่อ — ฉบับเต็มอยู่ใน CLAUDE.md)
 1. `InpAllowLive=false` บล็อกบัญชีจริงเสมอ — ไปได้ไกลสุดแค่ demo; การขึ้น live เป็นการตัดสินใจของ Owner เท่านั้น
@@ -29,6 +31,7 @@
 [<Cowork|Code> · Phase <N>]
 🎯 ทำอะไรรอบนี้
 • <what was done>
+• commit `<short-hash>` pushed (เฉพาะฝั่ง Code)
 📊 Progress
 • Phase <N> · <gate> · <✅ / 🔄 / ⏸️>
 💡 น่าสนใจ / คำแนะนำ     ← only if real
