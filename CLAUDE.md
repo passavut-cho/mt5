@@ -17,7 +17,7 @@
 
 ## ⛔ กฎเหล็ก (ห้ามฝ่าฝืนเด็ดขาด)
 1. **Live guard**: ทุก EA ต้องมี `input bool InpAllowLive = false;` — ใน `OnInit` ถ้า `ACCOUNT_TRADE_MODE == ACCOUNT_TRADE_MODE_REAL` และ `InpAllowLive == false` → `return INIT_FAILED` (Strategy Tester และ demo ทำงานได้ปกติ) ห้ามเขียนทางเลี่ยง guard นี้ในรูปแบบใดๆ
-2. **Risk ต่อไม้ ≤ 1% ของ equity**, **max daily loss 3%** (วัดจาก balance ต้นวันตามเวลา server) → ถึงแล้วหยุดเปิดไม้ใหม่จนถึงวันถัดไป
+2. **Risk ต่อไม้ ≤ 1% ของ equity รวม commission** (`InpCommissionPerLot` round turn) • **Max daily loss 3% ทั้งบัญชี**: equity (รวม floating) ≤ balance ต้นวัน (server time) × 97% → หยุดเปิดไม้ใหม่จนถึงวันถัดไป ไม้ที่เปิดอยู่ปล่อยให้ SL/TP ทำงาน (ADR 0002)
 3. **ห้าม martingale / grid / averaging down** — ห้ามเพิ่ม lot ตามผลไม้ก่อนหน้า ห้ามเปิดไม้เพิ่มทิศเดียวกันเพื่อเฉลี่ยราคา
 4. **ทุก order ต้องมี Stop Loss และ magic number** ตั้งแต่ตอนส่ง order (ไม่ใช่ modify ตามทีหลัง)
 5. **ห้าม hardcode** symbol, lot, timeframe, magic — ต้องเป็น input หรือมาจาก `_Symbol` / `_Period`

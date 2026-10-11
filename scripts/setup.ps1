@@ -46,10 +46,12 @@ Write-Host "Using terminal: $($t.InstallDir)" -ForegroundColor Cyan
 
 # --- junctions ---
 $mql5 = Join-Path $t.DataDir 'MQL5'
+New-Item -ItemType Directory -Force -Path "$mql5\Files" | Out-Null
 $links = @(
     @{ Link = "$mql5\Experts\SmartEA"; Target = "$repo\src\Experts\SmartEA" },
     @{ Link = "$mql5\Include\SmartEA"; Target = "$repo\src\Include" },
-    @{ Link = "$mql5\Scripts\SmartEA"; Target = "$repo\src\Scripts" }
+    @{ Link = "$mql5\Scripts\SmartEA"; Target = "$repo\src\Scripts" },
+    @{ Link = "$mql5\Files\SmartEA";   Target = "$repo\data\files" }
 )
 foreach ($l in $links) {
     if (Test-Path $l.Link) {

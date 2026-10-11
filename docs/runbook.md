@@ -20,7 +20,9 @@
 - รัน `run_backtest.ps1 -Ini smoke` ได้ report ใน `data/reports/`
 
 ## Phase 1 — Core Framework
-**งาน** (เรียก `mql5-architect` ทำ ADR + interface ก่อน)
+**งาน** (ADR 0002 = interface + flow — implement ตามนั้น)
+- `SymbolSpecDump.mq5` — ดึง spec ของ broker จริงมาใช้ตรวจสูตร (เสร็จแล้ว รอ compile)
+- `Types.mqh` (SSignalIntent), `BarClock.mqh` (new bar detection)
 - `CLogger` — level (DEBUG/INFO/WARN/ERROR), prefix ด้วย magic+symbol, ปิด DEBUG ใน tester ได้
 - `CRiskManager` — lot จาก %risk + ระยะ SL, normalize volume (ปัดลง), daily loss breaker (balance ต้นวัน server time), max open positions
 - `CTradeManager` — ห่อ `CTrade`: open พร้อม SL/TP + magic, close, modify, จัดการ retcode, filling mode อัตโนมัติ
