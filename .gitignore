@@ -1,0 +1,15 @@
+# compiled / generated
+*.ex5
+*.ex4
+data/compile*.log
+data/reports/*
+!data/reports/.gitkeep
+!data/reports/*.summary.md
+
+# machine-specific
+scripts/config.local.ps1
+.claude/settings.local.json
+
+# python
+__pycache__/
+.venv/

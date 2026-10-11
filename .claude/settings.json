@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File scripts/compile.ps1*)",
+      "Bash(powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run_backtest.ps1*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(python tests/python/*)"
+    ],
+    "ask": [
+      "Edit(src/Include/Config/**)",
+      "Write(src/Include/Config/**)",
+      "Edit(src/Include/Core/RiskManager.mqh)",
+      "Write(src/Include/Core/RiskManager.mqh)",
+      "Bash(git push*)"
+    ],
+    "deny": [
+      "Read(scripts/config.local.ps1)"
+    ]
+  }
+}
