@@ -32,7 +32,7 @@ depends: T-001
 goal: Phas ลาก RiskSelfTest ลง chart XAUUSD (IC demo) → `SELFTEST: PASS` แล้ววางผลให้ Cowork/Code บันทึกใน STATUS.md
 
 ## T-003 · P1 · G1.2 core smoke backtest 1 ปี
-status: DONE HASH_PLACEHOLDER
+status: DONE 19bb831
 needs: mt5-closed
 depends: T-001
 goal: สร้าง tests/tester-ini/core_smoke.ini (XAUUSD M15 2024.01.01-2024.12.31, Model=1, Leverage=500, Deposit=10000, ExpertParameters=core_smoke.set) + tests/setfiles/core_smoke.set (InpMaxSpreadPoints=20, ค่าอื่น default) แล้วรัน scripts/run_backtest.ps1 -Ini core_smoke จนได้ report ใน data/reports/ และไม่มีบรรทัด error/critical จาก SmartEA ใน tester journal; transcript ต้องแสดงบรรทัด "New day ... breaker ที่ equity<=" ของวันแรกที่ balance ต้นวัน = 10000; backtest-analyst สรุปลง data/reports/SmartEA_core_smoke.summary.md
