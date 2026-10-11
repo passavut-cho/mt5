@@ -17,6 +17,12 @@
 - `src/Scripts/SymbolSpecDump.mq5` (ยังไม่ได้ compile)
 - `setup.ps1` เพิ่ม junction `MQL5\Files\SmartEA → data\files`
 
+## Phase 1 — Implemented (2026-10-11, ยังไม่ผ่าน gate)
+- Core ตาม ADR 0002: Types, Logger, BarClock, SignalBase, SignalNone, RiskManager, TradeManager (+ LiveGuard ย้ายจาก SmartEA.mq5), ต่อเข้า SmartEA.mq5
+- `src/Scripts/RiskSelfTest.mq5`, `tests/setfiles/core-signalnone.set`, `tests/tester-ini/core-signalnone.ini`
+- ⚠️ **ยังไม่ได้ compile** (session นี้เป็น Linux ไม่มี MetaEditor) — Phas ต้องรัน `compile.ps1` แล้ววางผลกลับมา
+- risk-guardian / qa-reviewer: รอผล (commit นี้เป็น WIP)
+
 ## Phase 1 — Next
 1. ✅ D1–D3 ตัดสินแล้ว: daily loss ทั้งบัญชี / หยุดเปิดไม้ใหม่ / นับ commission (default 7.0)
 2. ติดตั้ง IC Markets MT5 + login demo Raw → รัน `setup.ps1` ใหม่ (เลือก terminal ของ IC)

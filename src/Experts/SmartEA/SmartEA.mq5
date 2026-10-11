@@ -1,61 +1,127 @@
 ﻿//+------------------------------------------------------------------+
 //|                                                     SmartEA.mq5  |
-//|  Phase 0 — skeleton: ยังไม่เทรด มีแค่ live guard                  |
+//|  Phase 1 — Core framework: Signal -> Risk -> Execution           |
+//|  (signal ตอนนี้ = CSignalNone จึงยังไม่เปิดไม้ — ใช้ smoke test)     |
 //+------------------------------------------------------------------+
 #property copyright "Phas"
 #property version   "1.00"   // รูปแบบ xxx.yyy ตาม MQL5 Market; ใช้ git tag บอก phase แทน
-#property description "SmartEA framework — Phase 0 skeleton (no trading)"
+#property description "SmartEA framework — Phase 1 core (CSignalNone: no entries)"
+
+#include <SmartEA/Core/Types.mqh>
+#include <SmartEA/Core/Logger.mqh>
+#include <SmartEA/Core/LiveGuard.mqh>
+#include <SmartEA/Core/BarClock.mqh>
+#include <SmartEA/Core/SignalBase.mqh>
+#include <SmartEA/Core/RiskManager.mqh>
+#include <SmartEA/Core/TradeManager.mqh>
+#include <SmartEA/Signals/SignalNone.mqh>
 
 //--- inputs
-input bool  InpAllowLive = false;   // อนุญาตบัญชีจริง — ผู้ใช้เท่านั้นที่เปิดได้
-input ulong InpMagic     = 260101;  // Magic number ของ EA นี้
+input bool           InpAllowLive         = false;     // อนุญาตบัญชีจริง — ผู้ใช้เท่านั้นที่เปิดได้
+input ulong          InpMagic             = 260101;    // Magic number ของ EA นี้
+input double         InpRiskPct           = 1.0;       // Risk ต่อไม้ % ของ equity (เพดาน 1.0)
+input double         InpDailyLossPct      = 3.0;       // Daily loss ทั้งบัญชี % (เพดาน 3.0)
+input int            InpMaxPositions      = 1;         // จำนวนไม้เปิดพร้อมกันสูงสุด (magic+symbol)
+input double         InpCommissionPerLot  = 7.0;       // Commission round turn ต่อ 1 lot (สกุลเงินบัญชี)
+input int            InpMaxSpreadPoints   = 0;         // spread สูงสุดที่เปิดไม้ได้ (points), 0 = ไม่จำกัด
+input uint           InpDeviationPoints   = 20;        // slippage สูงสุด (points)
+input ENUM_LOG_LEVEL InpLogLevel          = LOG_INFO;  // ระดับ log (DEBUG ถูกปิดใน tester)
+
+//--- objects (symbol/timeframe มาจาก _Symbol/_Period)
+CLogger      g_log;
+CBarClock    g_clock;
+CRiskManager g_risk;
+CTradeManager g_trade;
+CSignalBase *g_signal = NULL;
 
 //+------------------------------------------------------------------+
-//| Live guard (กฎเหล็กข้อ 1)                                          |
-//| - Tester / Optimization : ผ่านเสมอ                                |
-//| - Demo / Contest        : ผ่าน                                    |
-//| - Real                  : ผ่านเฉพาะเมื่อ InpAllowLive = true       |
-//| TODO(P1): ย้ายไป Core/ และเปลี่ยน Print เป็น CLogger              |
-//+------------------------------------------------------------------+
-bool CheckLiveGuard()
+void ReleaseSignal()
   {
-   if(MQLInfoInteger(MQL_TESTER) || MQLInfoInteger(MQL_OPTIMIZATION))
+   if(g_signal != NULL)
      {
-      Print("[SmartEA] live guard: OK (TESTER)");
-      return(true);
+      g_signal.Deinit();     // IndicatorRelease ทุก handle
+      delete g_signal;
+      g_signal = NULL;
      }
-
-   ENUM_ACCOUNT_TRADE_MODE mode = (ENUM_ACCOUNT_TRADE_MODE)AccountInfoInteger(ACCOUNT_TRADE_MODE);
-
-   if(mode == ACCOUNT_TRADE_MODE_REAL && !InpAllowLive)
-     {
-      Print("[SmartEA] live guard: BLOCKED - real account and InpAllowLive=false");
-      return(false);
-     }
-
-   string name = (mode == ACCOUNT_TRADE_MODE_DEMO)    ? "DEMO" :
-                 (mode == ACCOUNT_TRADE_MODE_CONTEST) ? "CONTEST" : "REAL (InpAllowLive=true)";
-   PrintFormat("[SmartEA] live guard: OK (%s) magic=%I64u", name, InpMagic);
-   return(true);
   }
 
 //+------------------------------------------------------------------+
 int OnInit()
   {
-   if(!CheckLiveGuard())
+   g_log.Init("SmartEA", InpMagic, InpLogLevel);
+
+   if(!CheckLiveGuard(InpAllowLive, g_log))
       return(INIT_FAILED);
+
+   if(!g_risk.Init(_Symbol, InpMagic, GetPointer(g_log), InpRiskPct, InpDailyLossPct,
+                   InpMaxPositions, InpCommissionPerLot, InpMaxSpreadPoints))
+      return(INIT_PARAMETERS_INCORRECT);
+
+   if(!g_trade.Init(_Symbol, InpMagic, GetPointer(g_log), InpDeviationPoints))
+      return(INIT_FAILED);
+
+   g_signal = new CSignalNone();
+   if(g_signal == NULL || !g_signal.Init(_Symbol, _Period, GetPointer(g_log)))
+     {
+      g_log.Error("signal init failed");
+      ReleaseSignal();
+      return(INIT_FAILED);
+     }
+
+   g_clock.Init(_Symbol, _Period);
+   g_log.Info(StringFormat("ready: signal=%s symbol=%s tf=%s", g_signal.Name(), _Symbol, EnumToString(_Period)));
    return(INIT_SUCCEEDED);
   }
 
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
   {
-   // P1: IndicatorRelease() ทุก handle ที่นี่
+   ReleaseSignal();
   }
 
 //+------------------------------------------------------------------+
 void OnTick()
   {
-   // Phase 0: ไม่เทรด — P1 จะต่อ Signal -> Risk -> Execution ที่นี่
+   if(!g_clock.IsNewBar())
+      return;
+
+   //--- 1) Risk gate: daily breaker, max positions, spread
+   string why = "";
+   if(!g_risk.CanOpen(why))
+     {
+      g_log.Debug("skip bar: " + why);
+      return;
+     }
+
+   //--- 2) Signal (คำนวณบนแท่งที่ปิดแล้วภายใน Signal เอง)
+   SSignalIntent intent;
+   intent.Reset();
+   if(!g_signal.Evaluate(intent))
+     {
+      g_log.Warn("signal data not ready: " + g_signal.Name());
+      return;
+     }
+   if(intent.dir == SIGNAL_NONE)
+      return;
+
+   //--- 3) Risk sizing
+   MqlTick tick;
+   if(!SymbolInfoTick(_Symbol, tick))
+     {
+      g_log.Trade("REJECT", "no tick for entry price");
+      return;
+     }
+   double entry = (intent.dir == SIGNAL_BUY) ? tick.ask : tick.bid;
+   double lot   = 0.0;
+   if(!g_risk.CalcLot(intent, entry, lot, why))
+     {
+      g_log.Trade("REJECT", StringFormat("%s | %s", intent.reason, why));
+      return;
+     }
+
+   //--- 4) Execution (SL/magic ส่งพร้อม order)
+   double sl = g_risk.SlPrice(intent.dir, entry, intent.sl_distance);
+   double tp = g_risk.TpPrice(intent.dir, entry, intent.tp_distance);
+   g_trade.Open(intent.dir, lot, sl, tp, intent.reason);
   }
 //+------------------------------------------------------------------+
