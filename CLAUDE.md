@@ -42,6 +42,22 @@
 - [ ] มี `.set` ใน `tests/setfiles/` และ `.ini` ใน `tests/tester-ini/`
 - [ ] อัปเดต `docs/STATUS.md` แล้ว commit + push (ดูหัวข้อ Git)
 
+## โหมดการทำงาน 3 แบบ
+| ใคร | เครื่องมือ | ทำอะไร |
+|---|---|---|
+| **Cowork** (claude.ai) | แก้ไฟล์ผ่านเครื่องที่ link | วางแผน, spec, ADR, review, วิเคราะห์ report, **เขียน/จัดลำดับ `docs/queue.md`** — ไม่ commit |
+| **Code interactive** (Owner นั่งอยู่) | `claude` ปกติ หรือ `claude --permission-mode auto` + `/goal` / `/loop` | task `needs: risk-edit`, debug, `/gate`, งานที่ต้องคุยกัน |
+| **CLI runner** (ไม่มีคนเฝ้า) | `scripts/run_queue.ps1` (headless `claude -p` + auto mode) | task `needs: none` / `mt5-closed` ต่อกันจนคิวหมดหรือติด |
+
+## Queue runner (ใช้กับ /run-task, /loop, run_queue.ps1)
+1. แหล่งงานเดียวคือ `docs/queue.md` — ทำทีละ 1 task, ห้ามทำงานนอกคิว, ห้ามเรียงลำดับ/ลบ task เอง
+2. เลือก task แรกที่ `READY` + depends ทุกตัว DONE + needs ทำได้ (ดูนิยาม needs ใน queue.md)
+3. headless (`-p`) ข้าม `needs: owner` และ `needs: risk-edit` เสมอ — ไฟล์ risk ตั้ง `ask` ไว้ จะถูกปฏิเสธอัตโนมัติ
+4. permission ถูกปฏิเสธ / ต้องการคำตัดสิน / หลักฐานไม่ครบ → `BLOCKED <เหตุผล>` แล้วหยุด — **ห้ามหาทางอ้อม**
+5. จบ task: อัปเดต queue.md + STATUS.md → commit + push → พิมพ์ `QUEUE: T-NNN DONE <hash>` หรือ `QUEUE: T-NNN BLOCKED <เหตุผล>`
+6. ไม่มีอะไรทำได้ → พิมพ์ `QUEUE: NOTHING RUNNABLE` + สรุปว่ารออะไร แล้วหยุด
+7. การเลื่อน Phase (`/gate`) และการเปลี่ยน spec เป็น APPROVED ทำได้เฉพาะ Owner
+
 ## Git — commit + push ทุกรอบงาน
 Remote: `origin` → github.com/passavut-cho/mt5 (branch `main`)
 1. จบทุกหน่วยงานที่เสร็จ (feature step, doc, fix) → `git add` เฉพาะไฟล์ที่เกี่ยวข้อง → commit → `git push origin main` **ทันที** ไม่ต้องรอถาม
@@ -68,7 +84,7 @@ Remote: `origin` → github.com/passavut-cho/mt5 (branch `main`)
 | `backtest-analyst` | ตีความ report, ตัดสิน gate ของ Phase 2–5 |
 | `qa-reviewer` | gate สุดท้ายก่อน commit feature |
 
-Commands: `/status` `/gate` `/compile` `/backtest <ini>` `/goal-plan` • built-in: `/goal`
+Commands: `/status` `/gate` `/compile` `/backtest <ini>` `/goal-plan` `/run-task [T-NNN]` • built-in: `/goal` `/loop` (ใช้ `.claude/loop.md`)
 
 ## รูปแบบรายงานท้ายทุกรอบงาน
 ปิดทุกรอบงาน (ไม่ใช่คำถามสั้น) ด้วย block นี้ — header tag ฝั่งนี้คือ `Code`:

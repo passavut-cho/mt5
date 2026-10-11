@@ -15,7 +15,9 @@
       "Bash(git pull --rebase*)",
       "Bash(git rev-parse*)",
       "Bash(git push origin main --tags)",
-      "Bash(git tag p*)"
+      "Bash(git tag p*)",
+      "Bash(powershell -NoProfile -Command \"Get-Process terminal64 -ErrorAction SilentlyContinue\")",
+      "Bash(git pull --rebase)"
     ],
     "ask": [
       "Edit(src/Include/Config/**)",

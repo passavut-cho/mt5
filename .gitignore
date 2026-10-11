@@ -16,3 +16,6 @@ __pycache__/
 
 # SymbolSpecDump runs ที่ใช้ไม่ได้
 data/files/_invalid/
+
+# queue runner logs
+data/logs/

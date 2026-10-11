@@ -12,7 +12,10 @@
 - **Code** (Claude Code บน Windows): implement MQL5, รัน compile.ps1 / run_backtest.ps1, เรียก subagents, commit
 - ทั้งสองฝั่งอ่าน `docs/STATUS.md` ก่อนเริ่ม และอัปเดตเมื่อจบงานที่เปลี่ยนสถานะ
 - **Git**: Code commit + push ไป `origin/main` (github.com/passavut-cho/mt5) ทุกรอบงาน; Cowork แก้ไฟล์แต่ไม่ commit — Code จะ sync เป็น `[P<n>] docs: sync from Cowork` ตอนเริ่ม session
-- **/goal**: งานยาวใน Code ใช้ `/goal` (template ใน `docs/goals.md`, ร่างด้วย `/goal-plan`) — Cowork ช่วยร่าง condition ได้
+- **Queue**: `docs/queue.md` คือรายการงานเดียวของ Code/CLI — **Cowork เป็นคนเขียน/จัดลำดับ task** (ระบุ status, needs, depends, goal ที่ตรวจได้) หลัง Owner ตัดสินใจ
+- **CLI runner**: `scripts/run_queue.ps1` รัน task `needs: none / mt5-closed` ต่อเนื่องแบบ headless; task `needs: owner / risk-edit` รอ Owner
+- **/goal**: งานเดี่ยวยาวๆ ใน Code interactive ใช้ `/goal` (template ใน `docs/goals.md`)
+- ทุกครั้งที่ Cowork เริ่มรอบงาน: อ่าน `git log` + queue.md ก่อน เพื่อรู้ว่า runner ทำอะไรไปแล้ว
 
 ## กฎเหล็ก (ย่อ — ฉบับเต็มอยู่ใน CLAUDE.md)
 1. `InpAllowLive=false` บล็อกบัญชีจริงเสมอ — ไปได้ไกลสุดแค่ demo; การขึ้น live เป็นการตัดสินใจของ Owner เท่านั้น

@@ -26,7 +26,8 @@
 - qa-reviewer MINOR ที่ยังไม่แก้ (deferred): SL normalize digits vs tick size, `actual_risk` ใช้ lot ที่ขอ (ไม่ใช่ `ResultVolume`) และไม่มี fallback ถ้า `ResultPrice()==0`, เคสขอบ D4 พึ่ง floating point, `intent.reason` เป็น order comment ควร ≤31 ตัวอักษร, `CountPositions` ซ้ำ 2 ที่, test D4/D6 ยังไม่ครอบคลุม end-to-end (CalcLot/ActualRisk/netting)
 
 ## Phase 1 — Next
-1. 🔄 RiskSelfTest บน IC demo — **ต้องรันซ้ำ** (มี test D4 + เงื่อนไขชุด B เข้มขึ้น) ครั้งก่อน `SELFTEST: PASS` เป็นของโค้ดก่อน G1.3
+> ตั้งแต่ 2026-10-12 งานของ Code/CLI ย้ายไปอยู่ใน `docs/queue.md` (T-002 … T-005) — ส่วนนี้เป็นสรุป
+1. ✅ RiskSelfTest รอบ 2 (หลัง G1.3) บน IC demo → pass=42 fail=0 `SELFTEST: PASS` (2026-10-12) รวมชุด D4 7 กรณี
 1b. ✅ SymbolSpecDump v1.10 → `data/files/specs_ICMarketsSC-Demo.tsv` (HEDGING, 100 oz, spread p95 11 pts) — สรุปใน docs/research/broker-icmarkets.md
 2. ✅ SmartEA บน IC demo → `live guard: OK (DEMO)`
 2b. ✅ G1.3 (D4–D6 + connected guard) — ดูด้านบน
@@ -35,6 +36,8 @@
 5. `/gate`
 
 ## Blockers / Open questions
+- ⚠️ IC demo balance = **500 USD** (จาก RiskSelfTest ชุด B) → ที่ risk 1% ทองเปิดไม้ไม่ได้ถ้า SL ≥ ~$5 (lot < 0.01) → T-006 ให้ Owner ตั้งเป็น 10,000 ก่อน Phase 5
+- ✅ Spec EMA+ADX v1 APPROVED (S1–S8) — implement ได้หลัง `/gate` Phase 1 (T-007)
 - ✅ D4–D7 อนุมัติตามข้อเสนอ (ADR 0002 addendum) → Claude Code implement ด้วย goal G1.3 • D7 = 20 points
 - `InpMaxPositions` ถูกล็อกที่ 1 (ADR: หนึ่ง position ต่อ magic+symbol)
 - Deferred MINOR: SL normalize 3 จุด, `InpMaxSpreadPoints` default 0 (ทองควรมีค่า?), CTrade log ตรง, `CountPositions` ซ้ำ 2 ที่, breaker ตรวจเฉพาะตอนแท่งใหม่
