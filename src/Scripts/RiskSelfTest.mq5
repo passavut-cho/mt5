@@ -54,12 +54,13 @@ void TestBreaker()
 //+------------------------------------------------------------------+
 void TestInitValidation(const string sym)
   {
-   g_log.Info("expect 5 ERROR lines below (rejection of invalid parameters):");
+   g_log.Info("expect 6 ERROR lines below (rejection of invalid parameters):");
    CRiskManager rm;
    Check(!rm.Init(sym, InpMagic, GetPointer(g_log), 1.5, 3.0, 1, InpCommission, 0), "init: risk 1.5% rejected");
    Check(!rm.Init(sym, InpMagic, GetPointer(g_log), 0.0, 3.0, 1, InpCommission, 0), "init: risk 0% rejected");
    Check(!rm.Init(sym, InpMagic, GetPointer(g_log), 1.0, 3.5, 1, InpCommission, 0), "init: daily loss 3.5% rejected");
    Check(!rm.Init(sym, InpMagic, GetPointer(g_log), 1.0, 3.0, 0, InpCommission, 0), "init: max positions 0 rejected");
+   Check(!rm.Init(sym, InpMagic, GetPointer(g_log), 1.0, 3.0, 2, InpCommission, 0), "init: max positions 2 rejected (no stacking)");
    Check(!rm.Init(sym, InpMagic, GetPointer(g_log), 1.0, 3.0, 1, -1.0, 0),          "init: negative commission rejected");
    Check(rm.Init(sym, InpMagic, GetPointer(g_log), 1.0, 3.0, 1, InpCommission, 0),  "init: valid parameters accepted");
   }

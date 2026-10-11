@@ -14,6 +14,7 @@
 //--- เพดานที่ตกลงไว้ — เกินนี้ Init ปฏิเสธ (INIT_PARAMETERS_INCORRECT ที่ EA)
 #define RISK_MAX_RISK_PCT        1.0
 #define RISK_MAX_DAILY_LOSS_PCT  3.0
+#define RISK_MAX_POSITIONS       1     // ADR 0002: หนึ่ง position ต่อ magic+symbol (ห้ามซ้อนไม้)
 
 class CRiskManager
   {
@@ -33,6 +34,7 @@ private:
    datetime          m_day_start;        // 00:00 server time ของวันที่กำลังติดตาม
    double            m_day_balance;      // balance ต้นวัน
    bool              m_halted;           // breaker ทำงานแล้ว — ค้างจนข้ามวัน
+   bool              m_baseline_ok;      // false = คำนวณ balance ต้นวันไม่ได้ -> fail-closed ไม่เปิดไม้
 
    //--- 00:00 ของวันตาม server time
    datetime          ServerDayStart() const
@@ -47,13 +49,15 @@ private:
 
    //--- balance ต้นวัน = balance ตอนนี้ − Σ(profit+swap+commission+fee) ของ deal วันนี้
    //--- ข้าม deal ประเภทฝาก/ถอน/credit/bonus (ไม่ใช่ผลการเทรด) — เงินฝากกลางวันจึงทำให้ breaker เข้มขึ้น (ฝั่งปลอดภัย)
-   double            ComputeDayStartBalance(const datetime day_start) const
+   //--- ok=false (history ดึงไม่ได้ / ค่าไม่สมเหตุผล) -> fail-closed: CanOpen จะไม่อนุญาตเปิดไม้
+   double            ComputeDayStartBalance(const datetime day_start, bool &ok) const
      {
+      ok = false;
       double balance = AccountInfoDouble(ACCOUNT_BALANCE);
       if(!HistorySelect(day_start, TimeTradeServer() + 60))
         {
          if(m_log != NULL)
-            m_log.Warn(StringFormat("HistorySelect failed err=%d — using current balance as day start", GetLastError()));
+            m_log.Warn(StringFormat("HistorySelect failed err=%d — day-start balance unknown, new trades blocked", GetLastError()));
          return(balance);
         }
       double pnl   = 0.0;
@@ -75,9 +79,10 @@ private:
       if(start <= 0.0)
         {
          if(m_log != NULL)
-            m_log.Warn(StringFormat("computed day-start balance %.2f invalid — using current balance %.2f", start, balance));
+            m_log.Warn(StringFormat("computed day-start balance %.2f invalid — new trades blocked", start));
          return(balance);
         }
+      ok = true;
       return(start);
      }
 
@@ -110,7 +115,7 @@ public:
                      CRiskManager() : m_symbol(""), m_magic(0), m_log(NULL), m_risk_pct(0.0),
                      m_daily_loss_pct(0.0), m_max_positions(1), m_commission_per_lot(0.0),
                      m_max_spread_points(0), m_digits(0), m_point(0.0), m_ready(false),
-                     m_day_start(0), m_day_balance(0.0), m_halted(false) {}
+                     m_day_start(0), m_day_balance(0.0), m_halted(false), m_baseline_ok(false) {}
 
    //--- false = พารามิเตอร์เกินเพดาน/ไม่ถูกต้อง (EA คืน INIT_PARAMETERS_INCORRECT)
    bool              Init(const string symbol, const ulong magic, CLogger *log,
@@ -135,9 +140,9 @@ public:
          m_log.Error(StringFormat("InpDailyLossPct=%.2f invalid (must be >0 and <=%.1f)", daily_loss_pct, RISK_MAX_DAILY_LOSS_PCT));
          return(false);
         }
-      if(max_positions < 1)
+      if(max_positions < 1 || max_positions > RISK_MAX_POSITIONS)
         {
-         m_log.Error(StringFormat("InpMaxPositions=%d invalid (must be >=1)", max_positions));
+         m_log.Error(StringFormat("InpMaxPositions=%d invalid (must be 1..%d)", max_positions, RISK_MAX_POSITIONS));
          return(false);
         }
       if(commission_per_lot < 0.0)
@@ -189,7 +194,7 @@ public:
    void              OnNewDay()
      {
       m_day_start   = ServerDayStart();
-      m_day_balance = ComputeDayStartBalance(m_day_start);
+      m_day_balance = ComputeDayStartBalance(m_day_start, m_baseline_ok);
       m_halted      = false;
       if(m_log != NULL)
          m_log.Info(StringFormat("new trading day %s | day-start balance=%.2f | breaker limit equity<=%.2f",
@@ -209,6 +214,14 @@ public:
 
       if(ServerDayStart() != m_day_start)
          OnNewDay();
+      else
+         if(!m_baseline_ok)      // ลองคำนวณ balance ต้นวันใหม่ — ยังไม่ได้ = ไม่เปิดไม้
+            m_day_balance = ComputeDayStartBalance(m_day_start, m_baseline_ok);
+      if(!m_baseline_ok)
+        {
+         why = "day-start balance unavailable (fail-closed)";
+         return(false);
+        }
 
       if(!m_halted)
         {

@@ -21,7 +21,8 @@
 - Core ตาม ADR 0002: Types, Logger, BarClock, SignalBase, SignalNone, RiskManager, TradeManager (+ LiveGuard ย้ายจาก SmartEA.mq5), ต่อเข้า SmartEA.mq5
 - `src/Scripts/RiskSelfTest.mq5`, `tests/setfiles/core-signalnone.set`, `tests/tester-ini/core-signalnone.ini`
 - ⚠️ **ยังไม่ได้ compile** (session นี้เป็น Linux ไม่มี MetaEditor) — Phas ต้องรัน `compile.ps1` แล้ววางผลกลับมา
-- risk-guardian / qa-reviewer: รอผล (commit นี้เป็น WIP)
+- risk-guardian รอบ 1 = REJECT → แก้แล้ว (Owner อนุมัติ 2026-10-11): เพดาน max positions = 1, balance ต้นวันคำนวณไม่ได้ = fail-closed; ต้องส่งตรวจซ้ำหลัง compile
+- qa-reviewer: รอผล
 
 ## Phase 1 — Next
 1. ✅ D1–D3 ตัดสินแล้ว: daily loss ทั้งบัญชี / หยุดเปิดไม้ใหม่ / นับ commission (default 7.0)
