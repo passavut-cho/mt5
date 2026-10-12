@@ -94,7 +94,7 @@ depends: —
 goal: อ่าน data/reports/SmartEA_ema_v1.htm + โค้ด แล้วอธิบายสาเหตุที่ 24/440 ไม้มี |TP − 2×SL| > 0.02 (สมมุติฐาน: SL/TP คิดจากราคาอ้างอิงตอนคำนวณ แต่ fill ต่าง หรือผลจาก T-010 ที่ปัด SL เข้าหา entry แต่ไม่ได้ปัด TP ให้สอดคล้อง). ถ้าเป็นบั๊ก → แก้ให้ TP = entry_จริง ± 2 × |entry_จริง − SL| บน tick grid (ไม่แตะ RiskManager — ถ้าต้องแตะให้ BLOCKED). บันทึกผลลง data/reports/SmartEA_ema_v1.tp-check.md. จบเมื่อ compile 0/0 (ถ้าแก้โค้ด), push สำเร็จพร้อม hash
 
 ## T-013 · P2 · หัก commission ในผลวิเคราะห์ backtest
-status: READY
+status: DONE 27a08f2
 needs: none
 depends: —
 goal: Strategy Tester ไม่หัก commission ของ IC Raw (คอลัมน์ Commission = 0) → สร้าง tests/python/report_stats.py ที่อ่าน report .htm ของ MT5 (UTF-16) แล้วคำนวณ net/PF/DD/expectancy **หลังหัก InpCommissionPerLot × volume ต่อไม้** + แยก long/short + รายปี, ออกเป็น markdown; และเพิ่ม `OnTester()` ใน SmartEA.mq5 คืนค่า net หลังหัก commission (ใช้เป็นเกณฑ์ optimize ใน Phase 4). ทดสอบกับ SmartEA_ema_v1.htm ต้องได้ net ≈ −3,780 (ตาม summary เดิม). backtest-analyst ต้องใช้สคริปต์นี้ทุกครั้งหลังจากนี้ (อัปเดต .claude/agents/backtest-analyst.md). จบเมื่อ compile 0/0, push สำเร็จพร้อม hash
