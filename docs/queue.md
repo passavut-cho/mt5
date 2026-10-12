@@ -74,7 +74,7 @@ depends: T-008
 goal: สร้าง tests/setfiles/ema_v1_risktest.set (เหมือน ema_v1.set แต่ InpDailyLossPct=0.5 เพื่อบังคับให้ breaker ทำงานบ่อย — ค่านี้ต่ำกว่าเพดาน 3% จึงไม่ฝ่ากฎ) + tests/tester-ini/ema_v1_risktest.ini (ช่วง 2024.01.01-2024.03.31) แล้วรัน backtest; transcript ต้องแสดงจาก journal: (1) ตัวอย่างบรรทัด CalcLot ที่ lot = floor(risk/(loss_per_lot+7)) ถูกต้อง 3 ไม้ (คำนวณมือเทียบ) (2) บรรทัด daily loss breaker / D4 pre-trade ปฏิเสธไม้อย่างน้อย 1 ครั้ง (3) ไม่มีวันไหนที่ขาดทุนเกิน 0.5% + 1 ไม้ (4) ทุก deal มี SL; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1_risktest.summary.md
 
 ## T-010 · P2 · ปรับการ normalize SL ให้ใช้ฟังก์ชันเดียว (minor จาก gate review P1)
-status: READY
+status: DONE 64bbf9b (รอ Owner รัน RiskSelfTest ชุด T-010 บน IC demo)
 needs: risk-edit
 depends: T-004
 goal: RiskManager.CalcLot (RiskManager.mqh:404) ใช้ NormalizeDouble(digits) แต่ TradeManager ใช้ NormPrice (ปัดตาม tick_size) → ให้ทั้งสองชั้นใช้ helper เดียวที่ปัดตาม tick_size แบบ **ห่างจาก entry ไม่ได้** (ปัด SL เข้าหา entry หรือคำนวณ lot จาก SL ที่ normalize แล้วจริง) เพื่อไม่ให้ risk เกิน 1% บน symbol ที่ tick_size ≠ point; XAUUSD ที่ IC (tick 0.01 = point) ไม่เปลี่ยนผล. เพิ่ม test ใน RiskSelfTest ด้วย tick_size สมมุติ 0.05. จบเมื่อ compile 0/0, risk-guardian PASS, push สำเร็จพร้อม hash — ทำใน session interactive (ไฟล์ risk ตั้ง ask)

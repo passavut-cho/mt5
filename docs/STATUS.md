@@ -23,7 +23,7 @@
 
 - **G1.3 implement แล้ว (2026-10-12):** D4 pre-trade check (`PreTradeOk` ใน CalcLot ปฏิเสธไม้ ไม่ลด lot) • D5 `CTradeManager::Open` ส่งครั้งเดียว + `retryable`, EA `OpenWithRetry` refresh ราคา→CanOpen→CalcLot ทุก attempt (สูงสุด 2 retry) และ log `actual_risk` หลัง fill • D6 netting fail closed + Warn ใน Init • CanOpen ปฏิเสธเมื่อ `TERMINAL_CONNECTED==0` นอก tester • breaker latch log Warn • D7 `InpMaxSpreadPoints=20` ใน `smoke.set` (ค่า default ในโค้ดคง 0), `Leverage=500` ใน `smoke.ini`
 - G1.3: compile 0/0 ทั้ง 3 ไฟล์ • risk-guardian PASS • qa-reviewer ไม่มี BLOCKER • เพิ่ม test D4 (7 เคส สูตรล้วน) ใน RiskSelfTest
-- qa-reviewer MINOR ที่ยังไม่แก้ (deferred): SL normalize digits vs tick size, `actual_risk` ใช้ lot ที่ขอ (ไม่ใช่ `ResultVolume`) และไม่มี fallback ถ้า `ResultPrice()==0`, เคสขอบ D4 พึ่ง floating point, `intent.reason` เป็น order comment ควร ≤31 ตัวอักษร, `CountPositions` ซ้ำ 2 ที่, test D4/D6 ยังไม่ครอบคลุม end-to-end (CalcLot/ActualRisk/netting)
+- qa-reviewer MINOR ที่ยังไม่แก้ (deferred): `actual_risk` ใช้ lot ที่ขอ (ไม่ใช่ `ResultVolume`) และไม่มี fallback ถ้า `ResultPrice()==0`, เคสขอบ D4 พึ่ง floating point, `intent.reason` เป็น order comment ควร ≤31 ตัวอักษร, `CountPositions` ซ้ำ 2 ที่, test D4/D6 ยังไม่ครอบคลุม end-to-end (CalcLot/ActualRisk/netting)
 
 ## Phase 1 — GATE PASSED (2026-10-12)
 - compile 0/0 • RiskSelfTest 42/0 • core_smoke 1 ปี (0 trades, journal สะอาด, breaker 9700) • risk-guardian PASS • qa-reviewer no BLOCKER
@@ -38,6 +38,8 @@
 4. ✅ journal: `New day 2024.01.01: balance ต้นวัน=10000.00 breaker ที่ equity<=9700.00`
 5. `/gate`
 
+- **T-010 (2026-10-12):** SL ปัดเข้าหา entry บน tick grid ด้วย helper เดียว `NormalizeSlPrice` (Types.mqh) ใช้ทั้ง CalcLot และ Open • compile 0/0 • risk-guardian PASS • qa-reviewer no BLOCKER • commit 64bbf9b • **รอ Owner รัน RiskSelfTest บน IC demo** (ชุด T-010 + ชุด B ใช้ helper ใหม่)
+
 ## Blockers / Open questions
 - ℹ️ Tester ini ต้องเขียน `Leverage=1:500` (รูปแบบ `Leverage=500` ถูกเพิกเฉย → core_smoke รันที่ 1:100) — แก้ ini ทุกไฟล์แล้ว 2026-10-12; ไม่กระทบผล G1.2 เพราะ 0 ไม้
 - ℹ️ Model=1 ใช้ได้เฉพาะ smoke; gate Phase 3+ ต้อง real ticks (Model=4)
@@ -45,7 +47,7 @@
 - ✅ Spec EMA+ADX v1 APPROVED (S1–S8) — implement ได้หลัง `/gate` Phase 1 (T-007)
 - ✅ D4–D7 อนุมัติตามข้อเสนอ (ADR 0002 addendum) → Claude Code implement ด้วย goal G1.3 • D7 = 20 points
 - `InpMaxPositions` ถูกล็อกที่ 1 (ADR: หนึ่ง position ต่อ magic+symbol)
-- Deferred MINOR: SL normalize 3 จุด, `InpMaxSpreadPoints` default 0 (ทองควรมีค่า?), CTrade log ตรง, `CountPositions` ซ้ำ 2 ที่, breaker ตรวจเฉพาะตอนแท่งใหม่
+- Deferred MINOR: `InpMaxSpreadPoints` default 0 (ทองควรมีค่า?), CTrade log ตรง, `CountPositions` ซ้ำ 2 ที่, breaker ตรวจเฉพาะตอนแท่งใหม่
 - ✅ IC demo = HEDGING (ยืนยันแล้ว)
 - ✅ D7: `InpMaxSpreadPoints = 20` สำหรับ XAUUSD (อนุมัติ 2026-10-12)
 - Phase 0–2 ใช้ MetaQuotes-Demo ต่อได้ แต่ตัวเลข risk/spec ทั้งหมดต้องอ้าง IC
