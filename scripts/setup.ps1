@@ -51,7 +51,8 @@ $links = @(
     @{ Link = "$mql5\Experts\SmartEA"; Target = "$repo\src\Experts\SmartEA" },
     @{ Link = "$mql5\Include\SmartEA"; Target = "$repo\src\Include" },
     @{ Link = "$mql5\Scripts\SmartEA"; Target = "$repo\src\Scripts" },
-    @{ Link = "$mql5\Files\SmartEA";   Target = "$repo\data\files" }
+    @{ Link = "$mql5\Files\SmartEA";   Target = "$repo\data\files" },
+    @{ Link = "$mql5\Indicators\SmartEA"; Target = "$repo\src\Indicators" }
 )
 foreach ($l in $links) {
     if (Test-Path $l.Link) {

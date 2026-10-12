@@ -112,7 +112,7 @@ depends: —
 goal: ดู docs/strategy/spec-ema-adx.md ข้อ 11 แล้วตอบ S9
 
 ## T-016 · P2 · Owner ตรวจ visual 10 ไม้
-status: WAIT_OWNER (T-014 DONE — รายการ 10 ไม้พร้อมแล้ว)
+status: DONE (2026-10-12: journal 10/10 + Owner screenshot ยืนยัน EMA cross — data/reports/SmartEA_ema_v1.visual-check.md)
 needs: owner
 depends: T-014
 goal: Owner เปิด Strategy Tester แบบ Visual กับ ema_v1 แล้วดู 10 ไม้นี้ (Cowork สุ่มจาก report T-014, seed 42, แยกตามวิธีปิด) ว่า entry/SL/TP/exit ตรง spec ข้อ 2–4 — ตอบ ✅/❌ รายไม้
@@ -146,3 +146,9 @@ status: WAIT_OWNER
 needs: owner
 depends: —
 goal: Owner/Cowork อนุมัติให้ ema_v1_risktest.set ใช้ InpRiskPct=0.25 คู่ InpDailyLossPct=0.5 (ทั้งคู่ต่ำกว่าเพดาน 1%/3%) แล้วรัน T-009 ซ้ำ
+
+## T-019 · P2 · สี EMA ใน visual tester (Owner ขอ 2026-10-12) — display only
+status: READY
+needs: mt5-closed
+depends: —
+goal: ให้ visual mode แสดง EMA9 กับ EMA21 คนละสี **โดยไม่เปลี่ยน logic การเทรด**: (1) สร้าง src/Indicators/SmartEA_EMAPair.mq5 — indicator บน chart หลัก 2 plot: EMA fast (input period, default 9) สี clrDodgerBlue width 2, EMA slow (default 21) สี clrOrange width 2, คำนวณ EMA ของ close เหมือน iMA(MODE_EMA, PRICE_CLOSE) (2) ใน CEMACrossSignal::Init (EMACrossSignal.mqh:120-121) ถ้า MQLInfoInteger(MQL_VISUAL_MODE): เรียก TesterHideIndicators(true) ก่อนสร้าง iMA 2 ตัว และ TesterHideIndicators(false) หลังสร้าง (ADX/ATR ยังแสดงตามเดิม) แล้วสร้าง handle iCustom ของ "SmartEA\\SmartEA_EMAPair" ด้วย period เดียวกันเพื่อ "แสดงผลอย่างเดียว" — ห้ามใช้ค่าจาก iCustom ตัดสินใจเทรด, release handle ใน Deinit (3) SmartEA.mq5 เพิ่ม `#property tester_indicator "SmartEA\\SmartEA_EMAPair.ex5"` (4) junction MQL5\Indicators\SmartEA ต้องมีอยู่ (setup.ps1 ใหม่สร้างให้ — ถ้าไม่มีให้ BLOCKED "Owner ต้องรัน scripts/setup.ps1 ใหม่"). Acceptance: compile.ps1 PASS 0/0 ทุกไฟล์ (indicator compile ก่อน EA แล้ว), qa-reviewer ไม่มี BLOCKER, รัน run_backtest.ps1 -Ini ema_v1 แล้ว report_stats ต้องได้ **426 ไม้ และ net หลังหัก commission −3,777.38 เท่าเดิม** (พิสูจน์ว่าไม่กระทบ logic), push สำเร็จพร้อม hash

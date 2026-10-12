@@ -14,9 +14,12 @@ if (-not (Test-Path $cfg)) { throw "Missing $cfg - run scripts/setup.ps1 first" 
 $mql5 = Join-Path $MT5_DATA_DIR 'MQL5'
 
 if (-not $File) {
-    $File = @('Experts\SmartEA\SmartEA.mq5')
+    $File = @()
     $File += Get-ChildItem "$repo\src\Scripts" -Filter *.mq5 -ErrorAction SilentlyContinue |
              ForEach-Object { "Scripts\SmartEA\$($_.Name)" }
+    $File += Get-ChildItem "$repo\src\Indicators" -Filter *.mq5 -ErrorAction SilentlyContinue |
+             ForEach-Object { "Indicators\SmartEA\$($_.Name)" }
+    $File = @($File | Where-Object { $_ -like 'Indicators*' }) + @('Experts\SmartEA\SmartEA.mq5') + @($File | Where-Object { $_ -like 'Scripts*' })
 }
 
 function Read-MetaLog([string]$path) {
