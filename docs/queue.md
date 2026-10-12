@@ -166,7 +166,7 @@ depends: —
 goal: อ่าน docs/strategy/v2-options.md แล้วตอบ V1–V3 → Cowork เขียน spec-ema-adx-v2.md + docs/strategy/experiments.md + งาน implement/backtest ลงคิว
 
 ## T-023 · P3 · ตรวจ news.csv 2023–2024 กับแหล่งทางการ
-status: DONE @@H@@ (64/64 แถวถูกต้อง ไม่มีแก้ — docs/research/news-calendar.md)
+status: DONE abbf7fb (64/64 แถวถูกต้อง ไม่มีแก้ — docs/research/news-calendar.md)
 needs: none
 depends: —
 goal: data/files/news.csv (64 แถว: NFP 24, CPI 24, FOMC 16) Cowork เขียนจากความจำ — ตรวจทุกแถวกับ BLS release calendar (Employment Situation, CPI) และ federalreserve.gov FOMC calendars ปี 2023–2024 ด้วย WebSearch/WebFetch • แก้วันที่ผิดได้ (เป็นข้อมูล ไม่ใช่ค่า risk) แล้วเปลี่ยน verified เป็น `bls` / `fed` • ระวัง: FOMC 2024-11-07 เป็นวันพฤหัส, 2024-06-12 มีทั้ง CPI และ FOMC • ถ้าเข้าเว็บแหล่งทางการไม่ได้ให้ BLOCKED (ห้ามเดา) • บันทึกลิงก์แหล่งใน docs/research/news-calendar.md • จบเมื่อ push สำเร็จพร้อม hash
