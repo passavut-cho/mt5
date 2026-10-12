@@ -48,6 +48,8 @@
 
 - **T-011 (2026-10-12):** แก้ S6 — `CheckTimeExit` (SmartEA.mq5) ปิด position เมื่อเวลา >= InpTimeExitHHMM **หรือ** มี position ที่เปิดก่อน 00:00 server ของวันนี้ (`HeldFromBeforeToday`) • compile 0/0 • risk-guardian PASS • qa-reviewer no BLOCKER • commit 285cbf3 • qa MINOR ค้าง: ไม่ตรวจ return CloseAll ที่ call site, last_try ใช้ TimeCurrent คนละ clock, loop position 2 รอบ, spec S6 ควรเติม "หรือถือข้ามวัน"
 
+- **T-012 (2026-10-12):** ตรวจ TP≠2×SL 24/440 ไม้ → ไม่ใช่บั๊ก: ต่างกัน 0.02 (2 tick) พอดีทุกไม้ จาก SL ปัดเข้าหา entry + TP ปัดใกล้สุดแยกกัน (fill = ask/bid ที่ใช้คำนวณ) • ไม่แก้โค้ด • `data/reports/SmartEA_ema_v1.tp-check.md`
+
 ## Blockers / Open questions
 - ✅ RiskSelfTest หลัง T-010 บน IC demo: pass=70 fail=0 (2026-10-12)
 - ✅ S9 = (b) holiday file `data/files/holidays.csv` (2023–2026) + กฎอัปเดตทุกปี (CLAUDE.md) → T-017 implement, T-018 ปี 2027 ภายใน 15 ธ.ค.
