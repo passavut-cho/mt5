@@ -1,6 +1,6 @@
 # Project Status
 
-**Current phase:** 2 — Strategy v1 (EMA 9/21 + ADX) — Phase 1 gate ผ่าน 2026-10-12 (tag p1-done, Owner อนุมัติ)
+**Current phase:** 3 — Validation — Phase 2 gate ผ่าน 2026-10-12 (tag p2-done, Owner อนุมัติ)
 **Last updated:** 2026-10-12
 **Broker เป้าหมาย:** IC Markets (Raw Trading Ltd, FSA Seychelles) — demo บัญชี Raw
 
@@ -61,6 +61,12 @@
 - **T-009 รอบ 2 (2026-10-12): BLOCKED** — risktest (Risk 0.5/DailyLoss 1.5, Q1 2024, Model=1): 55 ไม้, net หลังหัก comm +199.43, PF 1.15 • (1) lot ตรงสูตรมือ 55/55, actual_risk ≤0.497% ✅ (3) ไม่มีวันเกิน 1.5% (สูงสุด 03-19 −1.466%) ✅ (4) ทุกไม้มี SL, journal สะอาด ✅ • **(2) ไม่มี D4 reject/breaker** (headroom ต่ำสุด +5.51) → reject path ยังไม่พิสูจน์ใน tester • CalcLot log เป็น DEBUG ไม่ขึ้นใน tester (ใช้ TRADE OPEN/RISK แทน) • รอ Owner: เลือกค่า test ที่บังคับ reject (DailyLoss ~0.75–1.0 คู่ Risk 0.5) แทน T-019 • สรุป `data/reports/SmartEA_ema_v1_risktest.summary.md`
 
 - **T-009 รอบ 3 (2026-10-12): DONE** — risktest ทั้งปี 2024 (Risk 0.5 / DailyLoss 1.0, Model=1): 206 ไม้, lot ตรงสูตรมือ (3 ไม้ตัวอย่าง), actual_risk 0.48–0.50% • D4 pre-trade reject 6 ครั้ง (เช่น 2024.03.19 16:45 ขาดทุนสะสม 0.955% ก่อน reject) • ไม่มีวันขาดทุน realized ถึง 1.0% (สูงสุด 09.16 −0.992% หลังหัก comm, headroom ~$0.8) • 0/206 sl=0, journal สะอาด • net หลังหัก comm −800.96, PF 0.86 (ใช้ยืนยัน risk เท่านั้น) • สรุป `data/reports/SmartEA_ema_v1_risktest.summary.md`
+
+## Phase 2 — GATE PASSED (2026-10-12)
+- compile 0/0 (4 ไฟล์) • BOM ครบ 13 ไฟล์ • risk-guardian PASS • qa-reviewer no BLOCKER • backtest-analyst ผ่าน (426 ไม้ in-sample 2023–2024, spec ข้อ 9 ครบ, visual 10 ไม้ T-016)
+- ⚠️ ข้อมูลให้ Phase 3: net หลังหัก comm −3,777.38, PF 0.82, balance DD 42.3%, ขาดทุนทั้ง 2 ปี • long PF 1.09 / short PF 0.62 → ต้องตัดสิน spec v2 • Model=1 เท่านั้น → Phase 3 ต้อง Model=4 + commission 7.0
+- qa MAJOR ค้าง: `Evaluate()` คืน false → ข้าม S3 ในแท่งนั้น (S6 ยังปิดที่ 23:30)
+- Owner อนุมัติ: default `InpMaxSpreadPoints` = 20 (ADR 0002 D7 แก้ไข, symbol อื่นต้องตั้งใน .set) — commit แยกหลัง gate
 
 ## Blockers / Open questions
 - ✅ RiskSelfTest หลัง T-010 บน IC demo: pass=70 fail=0 (2026-10-12)
