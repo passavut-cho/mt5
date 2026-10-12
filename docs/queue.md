@@ -68,7 +68,7 @@ depends: T-007
 goal: รัน scripts/run_backtest.ps1 -Ini ema_v1 ได้ report ใน data/reports/; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1.summary.md ตาม spec ข้อ 9 (จำนวนไม้ ≥ 100?, ไม่มีไม้นอก session, ไม่มีไม้ข้าม 23:30, ทุกไม้มี SL) พร้อม metric ครบ; ห้ามปรับพารามิเตอร์เพื่อให้ผลดีขึ้น — ถ้าไม่ผ่านเกณฑ์ให้ BLOCKED แล้วรายงาน
 
 ## T-009 · P2 · Integration test: risk ทำงานจริงเมื่อมีไม้
-status: DONE HASHX (รอบ 3: D4 reject 6 ครั้ง, ไม่มีวันขาดทุนถึง 1.0%)
+status: DONE 4e86b35 (รอบ 3: D4 reject 6 ครั้ง, ไม่มีวันขาดทุนถึง 1.0%)
 needs: mt5-closed
 depends: T-014
 goal: [รอบ 3 — แก้โดย Cowork 2026-10-12] รอบ 1: daily 0.5% < risk 1% → D4 ปฏิเสธทุกไม้ • รอบ 2: risk 0.5% / daily 1.5% ช่วง 3 เดือน → risk จริงต่อไม้ ~0.48% จึงขาดทุน 3 ไม้แล้วยังไม่ถึง 1.5% ไม่มี reject เลย (วัน 2024.03.19 เหลือ headroom 5.51) • **รอบ 3: ใช้ tests/setfiles/ema_v1_risktest.set ที่ Cowork แก้แล้ว (InpRiskPct=0.5, InpDailyLossPct=1.0) และ ini ช่วง 2024.01.01–2024.12.31** — ห้ามแก้ค่าเพิ่ม: ขาดทุน 2 ไม้ (~0.96%) แล้ว D4 ต้องปฏิเสธไม้ถัดไปในวันนั้น. รัน backtest แล้ว transcript ต้องแสดงจาก journal: (1) ตัวอย่าง TRADE OPEN + TRADE RISK 3 ไม้ที่ lot = floor(risk/(loss_per_lot+7)/0.01)×0.01 ถูกต้อง (คำนวณมือเทียบ) (2) บรรทัด `TRADE REJECT ... D4 pre-trade` หรือ daily loss breaker อย่างน้อย 1 ครั้ง พร้อมยืนยันว่าเป็นวันที่ขาดทุนสะสมใกล้ 1% จริง (3) ไม่มีวันไหนขาดทุน realized เกิน 1.0% ของ balance ต้นวัน (ยกเว้น slippage/gap ต้องรายงานเป็นรายวัน) (4) ทุก entry มี SL; ใช้ report_stats.py; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1_risktest.summary.md (เขียนทับรอบก่อน). ถ้าทั้งปีไม่มี reject เลย → BLOCKED พร้อมรายงานวันที่ headroom น้อยสุด 3 วัน
