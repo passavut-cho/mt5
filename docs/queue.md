@@ -6,7 +6,7 @@
 ## รูปแบบ task
 ```
 ## T-NNN · P<phase> · <ชื่อสั้น>
-status: READY | IN_PROGRESS | DONE 5259387 | BLOCKED <เหตุผล> | WAIT_OWNER
+status: READY | IN_PROGRESS | DONE <hash> | BLOCKED <เหตุผล> | WAIT_OWNER
 needs: none | mt5-closed | owner | risk-edit
 depends: T-xxx, T-yyy  (หรือ —)
 goal: <เงื่อนไขจบที่ตรวจได้จาก transcript>
@@ -141,8 +141,8 @@ needs: owner
 depends: —
 goal: ภายใน 2026-12-15: Cowork ดึง CME holiday calendar 2027 (COMEX metals) + ตรวจกับประกาศ IC → เพิ่มแถว 2027 + covered_years ใน data/files/holidays.csv → Owner รับทราบ → Code commit `data: holidays 2027` (สร้าง T ใหม่ของปีถัดไปทุกครั้งที่ปิดงานนี้)
 
-## T-019 · P2 · แก้ design T-009: ลด InpRiskPct ใน risktest.set
-status: WAIT_OWNER
+## T-020 · P2 · แก้ design T-009: ลด InpRiskPct ใน risktest.set (เดิมใช้เลข T-019 ซ้ำ — Cowork เปลี่ยนเลข 2026-10-12)
+status: DONE (ยกเลิก — ไม่จำเป็น: T-009 รอบ 3 ผ่านด้วย 0.5%/1.0%, D4 reject 6 ครั้ง)
 needs: owner
 depends: —
 goal: Owner/Cowork อนุมัติให้ ema_v1_risktest.set ใช้ InpRiskPct=0.25 คู่ InpDailyLossPct=0.5 (ทั้งคู่ต่ำกว่าเพดาน 1%/3%) แล้วรัน T-009 ซ้ำ
