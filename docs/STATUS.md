@@ -40,7 +40,7 @@
 
 - **T-010 (2026-10-12):** SL ปัดเข้าหา entry บน tick grid ด้วย helper เดียว `NormalizeSlPrice` (Types.mqh) ใช้ทั้ง CalcLot และ Open • compile 0/0 • risk-guardian PASS • qa-reviewer no BLOCKER • commit 64bbf9b • **รอ Owner รัน RiskSelfTest บน IC demo** (ชุด T-010 + ชุด B ใช้ helper ใหม่)
 
-- **T-007 (2026-10-12):**  (Signals/EMACrossSignal.mqh) + ต่อเข้า SmartEA: S1 session, S2 ADX/DI, S3 ปิดสวนทางแล้วเข้าใหม่ถ้าผ่าน filter, S4 ATR SL (ไม่เข้าถ้า <2×spread), S5 2R, S6 time exit 23:30 (ตรวจทุก tick), S7 ศุกร์ • ไม่แตะ RiskManager/Config/Core (ไม่ต้องมี ADR 0003) • compile 0/0 • risk-guardian PASS • qa-reviewer no BLOCKER • commit 320854f •  พร้อม รอ T-008
+- **T-007 (2026-10-12):** CEMACrossSignal (Signals/EMACrossSignal.mqh) + ต่อเข้า SmartEA: S1 session, S2 ADX/DI, S3 ปิดสวนทางแล้วเข้าใหม่ถ้าผ่าน filter, S4 ATR SL (ไม่เข้าถ้า <2×spread), S5 2R, S6 time exit 23:30 (ตรวจทุก tick), S7 ศุกร์ • ไม่แตะ RiskManager/Config/Core (ไม่ต้องมี ADR 0003) • compile 0/0 • risk-guardian PASS • qa-reviewer no BLOCKER • commit 320854f • ema_v1.set + ema_v1.ini พร้อม รอ T-008
 - qa MINOR ที่ยังไม่แก้: time exit ไม่ทำงานถ้าถือข้ามเที่ยงคืน (hhmm>=2330 เท่านั้น), Configure ไม่เตือนเมื่อ exit < session end, ไม่มี log DEBUG ตอน CopyBuffer ล้มเหลว
 
 ## Blockers / Open questions
