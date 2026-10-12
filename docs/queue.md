@@ -194,3 +194,39 @@ status: DONE 0b3c6c7 (stress 20 บน ema_v1: base −3,777.38 / stress −5,71
 needs: none
 depends: —
 goal: เพิ่ม option `--extra-cost-points N` ใน tests/python/report_stats.py: หักต้นทุนเพิ่ม N points × contract_size(100) × point(0.01) × volume ต่อไม้ (ทอง: 20 points = $20/lot round turn) แสดงคู่กับผล base ในตารางเดียว (net, PF, DD, expectancy) • ทดสอบกับ SmartEA_ema_v1.htm: base ต้องได้ net −3,777.38 เท่าเดิม และ stress 20 ต้องหักเพิ่มเท่ากับ 20 × volume รวม (96.85 lot → −1,937.00) • อัปเดต .claude/agents/backtest-analyst.md ให้รายงาน stress ทุกครั้งตั้งแต่ Phase 3 • push พร้อม hash
+
+## T-028 · P3 · Owner ตัดสินทิศทางหลัง v2 ไม่ผ่าน (N1–N3)
+status: DONE (Owner 2026-10-12: N1–N3 ตามที่เสนอ → spec-session-breakout.md, spec-donchian-h4.md)
+needs: owner
+depends: —
+goal: อ่าน docs/strategy/v3-directions.md + สรุปท้าย docs/strategy/experiments.md แล้วตอบ N1–N3
+
+## T-029 · P3 · ขยาย holidays.csv + news.csv ย้อนหลัง 2010–2022
+status: READY
+needs: none
+depends: —
+goal: เติมแถวปี 2010–2022 ใน data/files/holidays.csv (US/CME holiday + early close ที่กระทบ COMEX gold) และ data/files/news.csv (NFP, CPI 08:30 ET = 15:30 server / FOMC statement ใช้ **เวลาประกาศจริงของแต่ละครั้ง** แปลงเป็น server = ET+7 — ระวังปี 2011–2012 บางนัดประกาศ 12:30 ET หรือ 14:15 ET ไม่ใช่ 14:00 — รวม FOMC นัดพิเศษ เช่น 2020-03-03, 2020-03-15 ถ้ามีเวลาประกาศชัด) จากแหล่งทางการ (BLS release archives, federalreserve.gov FOMC historical) ด้วย WebSearch/WebFetch • ใส่ verified ตามแหล่ง • อัปเดต `# covered_years:` ทั้ง 2 ไฟล์ • **ห้ามเดา — ปีไหนหาแหล่งทางการไม่ได้ให้ไม่ใส่ปีนั้นใน covered_years** แล้วรายงาน • บันทึกแหล่งใน docs/research/news-calendar.md • push พร้อม hash
+
+## T-030 · P3 · ตรวจ timezone ของ history IC ช่วง 2010–2022
+status: READY
+needs: mt5-closed
+depends: —
+goal: ยืนยันว่าแท่ง M15 XAUUSD ของ IC ในอดีตใช้ server time = New York + 7 ชม. เหมือนปัจจุบัน: สร้าง script หรือ backtest สั้นที่พิมพ์ช่วง M15 ที่ range (high−low) ใหญ่สุดของวัน NFP 5 วัน (เช่น 2011-08-05, 2014-03-07, 2016-07-08, 2019-02-01, 2021-04-02) → แท่งใหญ่สุดต้องเริ่ม 15:30 server ทุกวัน • ถ้าไม่ตรง (เช่น เป็น 14:30 หรือ 16:30) ให้ BLOCKED พร้อมตาราง offset ที่พบ — เพราะ session/news filter จะผิดทั้งหมด • บันทึกผลใน docs/research/history-timezone.md
+
+## T-031 · P3 · Implement CSessionBreakoutSignal (S-A)
+status: READY
+needs: none
+depends: —
+goal: implement ตาม docs/strategy/spec-session-breakout.md เป็น Signal class ใหม่ + `InpStrategy` เลือก signal (default EMA_ADX = พฤติกรรมเดิม) • ห้ามแตะ RiskManager/Config • สร้าง tests/setfiles/sbo_a1..a4.set และ tests/tester-ini/sbo_research.ini (XAUUSD M15 2010.01.01–2022.12.31, Model=1, Leverage=1:500, Deposit=10000) • regression: InpStrategy=EMA_ADX + ema_v1.set ต้องได้ 426 ไม้ net −3,777.38 (ถ้า MT5 เปิดอยู่ให้ข้าม regression และบอกใน report ว่ายังไม่รัน) • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER • push พร้อม hash
+
+## T-032 · P3 · Experiments A1–A4 บน research set 2010–2022
+status: READY
+needs: mt5-closed
+depends: T-029, T-030, T-031
+goal: รัน sbo_a1..a4.set บน sbo_research.ini → report_stats.py base + `--extra-cost-points 20` + **แยกรายปี และแยก long/short** • เติมแถว (ID A1–A4) ใน docs/strategy/experiments.md พร้อมตัดสินตาม pre-validation bar ใน spec ทุกข้อ (PF, stress PF, trades, DD, % ปีที่กำไร, long/short PF) • **ห้ามแตะ 2023–2026, ห้ามปรับพารามิเตอร์, ห้ามเพิ่ม variant** • push พร้อม hash
+
+## T-033 · P3 · Owner ตัดสิน S-B (O1–O3)
+status: WAIT_OWNER
+needs: owner
+depends: —
+goal: อ่าน docs/strategy/spec-donchian-h4.md แล้วตอบ O1–O3

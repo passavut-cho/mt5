@@ -70,6 +70,7 @@
 - Owner อนุมัติ: default `InpMaxSpreadPoints` = 20 (ADR 0002 D7 แก้ไข, symbol อื่นต้องตั้งใน .set) — commit แยกหลัง gate
 
 ## Blockers / Open questions
+- ⛔ **v2 (E2–E5) ไม่ผ่าน** — ไม่มี flag ช่วยเกิน noise floor, v1 ไม่มี edge แม้ก่อนหักต้นทุน → หยุดตามกฎ V3 • รอ Owner ตัดสินทิศทาง N1–N3 (T-028, docs/strategy/v3-directions.md)
 - ✅ RiskSelfTest หลัง T-010 บน IC demo: pass=70 fail=0 (2026-10-12)
 - ✅ S9 = (b) holiday file `data/files/holidays.csv` (2023–2026) + กฎอัปเดตทุกปี (CLAUDE.md) → T-017 implement, T-018 ปี 2027 ภายใน 15 ธ.ค.
 - ℹ️ Tester ini ต้องเขียน `Leverage=1:500` (รูปแบบ `Leverage=500` ถูกเพิกเฉย → core_smoke รันที่ 1:100) — แก้ ini ทุกไฟล์แล้ว 2026-10-12; ไม่กระทบผล G1.2 เพราะ 0 ไม้
