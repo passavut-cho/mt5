@@ -1,0 +1,59 @@
+# SmartEA no-new-entry dates (server date) - US/CME holidays that affect COMEX gold (XAUUSD)
+# covered_years: 2023,2024,2025,2026
+# type: closed = no session / early_halt = CME holiday early halt (~12:00 CT) / early_close = probable early close (verify with IC notice)
+# verified: cme = checked vs CME-based 2026 calendar / fed = US federal holiday calendar (Cowork 2026-10-12) / probable = needs check
+date,type,note,verified
+2023-01-02,closed,New Year (observed),fed
+2023-01-16,early_halt,MLK Day,fed
+2023-02-20,early_halt,Presidents Day,fed
+2023-04-07,closed,Good Friday,fed
+2023-05-29,early_halt,Memorial Day,fed
+2023-06-19,early_halt,Juneteenth,fed
+2023-07-03,early_close,Day before Independence Day,probable
+2023-07-04,early_halt,Independence Day,fed
+2023-09-04,early_halt,Labor Day,fed
+2023-11-23,closed,Thanksgiving,fed
+2023-11-24,early_close,Day after Thanksgiving,probable
+2023-12-25,closed,Christmas,fed
+2024-01-01,closed,New Year,fed
+2024-01-15,early_halt,MLK Day,fed
+2024-02-19,early_halt,Presidents Day,fed
+2024-03-29,closed,Good Friday,fed
+2024-05-27,early_halt,Memorial Day,fed
+2024-06-19,early_halt,Juneteenth,fed
+2024-07-03,early_close,Day before Independence Day,probable
+2024-07-04,early_halt,Independence Day,fed
+2024-09-02,early_halt,Labor Day,fed
+2024-11-28,closed,Thanksgiving,fed
+2024-11-29,early_close,Day after Thanksgiving,probable
+2024-12-24,early_close,Christmas Eve,probable
+2024-12-25,closed,Christmas,fed
+2024-12-31,early_close,New Year's Eve,probable
+2025-01-01,closed,New Year,fed
+2025-01-09,early_close,National Day of Mourning (Carter) - special schedule,probable
+2025-01-20,early_halt,MLK Day,fed
+2025-02-17,early_halt,Presidents Day,fed
+2025-04-18,closed,Good Friday,fed
+2025-05-26,early_halt,Memorial Day,fed
+2025-06-19,early_halt,Juneteenth,fed
+2025-07-03,early_close,Day before Independence Day,probable
+2025-07-04,early_halt,Independence Day,fed
+2025-09-01,early_halt,Labor Day,fed
+2025-11-27,closed,Thanksgiving,fed
+2025-11-28,early_close,Day after Thanksgiving,probable
+2025-12-24,early_close,Christmas Eve,probable
+2025-12-25,closed,Christmas,fed
+2025-12-31,early_close,New Year's Eve,probable
+2026-01-01,closed,New Year,cme
+2026-01-19,early_halt,MLK Day,cme
+2026-02-16,early_halt,Presidents Day,cme
+2026-04-03,closed,Good Friday,cme
+2026-05-25,early_halt,Memorial Day,cme
+2026-06-19,early_halt,Juneteenth,cme
+2026-07-03,early_halt,Independence Day (observed),cme
+2026-09-07,early_halt,Labor Day,cme
+2026-11-26,closed,Thanksgiving,cme
+2026-11-27,early_close,Day after Thanksgiving,cme
+2026-12-24,early_close,Christmas Eve,probable
+2026-12-25,closed,Christmas,cme
+2026-12-31,early_close,New Year's Eve,probable

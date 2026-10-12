@@ -42,6 +42,13 @@
 - [ ] มี `.set` ใน `tests/setfiles/` และ `.ini` ใน `tests/tester-ini/`
 - [ ] อัปเดต `docs/STATUS.md` แล้ว commit + push (ดูหัวข้อ Git)
 
+## Holiday calendar (spec S9) — อัปเดตทุกปี
+- ไฟล์เดียว: `data/files/holidays.csv` (EA อ่านผ่าน junction `MQL5\Files\SmartEA\`) — วันที่เป็น **server date** • `# covered_years:` บอกปีที่ครอบคลุม
+- **ภายใน 15 ธันวาคมของทุกปี** ต้องเพิ่มปีถัดไป: ดึงจาก CME Group holiday calendar (COMEX metals) เป็นหลัก + ประกาศ holiday trading hours ของ IC Markets เป็นตัวยืนยัน → ใส่ `verified` ตามแหล่ง → อัปเดต `covered_years` → commit `[P<n>] data: holidays <ปี>` → Owner รับทราบ
+- ประกาศของ CME/IC ออกล่วงหน้าไม่กี่สัปดาห์ → แถว `probable` ต้องถูกยืนยันใหม่ภายใน 2 สัปดาห์ก่อนถึงวันจริง (ตอนรัน demo/live)
+- ห้ามลบปีที่ผ่านมา (backtest ต้องใช้) • ถ้า backtest ช่วงที่ไม่อยู่ใน covered_years → EA จะไม่เปิดไม้ (fail closed) ต้องเติมไฟล์ก่อน
+- backtest-analyst: ไม้ที่ข้าม 23:30 ในวันที่ไม่อยู่ในไฟล์ = หลักฐานว่าต้องเพิ่มวันนั้น → รายงานใน ⚠️
+
 ## โหมดการทำงาน 3 แบบ
 | ใคร | เครื่องมือ | ทำอะไร |
 |---|---|---|
