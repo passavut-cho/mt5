@@ -18,7 +18,17 @@
 flags ทั้งหมดเป็นค่า default + Model=1 + ema_v1.set → **426 ไม้, net หลังหัก commission −3,777.38** เท่ากับ T-014 ทุกตัว
 
 ## Experiments (บันทึกใน `docs/strategy/experiments.md`)
-- in-sample 2023-01-01 → 2024-12-31, **Model=4**, commission 7.0, ใช้ report_stats.py
+- in-sample 2023-01-01 → 2024-12-31, **Model=1** (R1) + cost stress +20 points/round turn, commission 7.0, ใช้ report_stats.py
 - 1 flag ต่อ run (E2–E5) → รวมเฉพาะ flag ที่ "ช่วยจริง" (PF ดีขึ้น **และ** DD ไม่แย่ลง เทียบ E1) เป็น E6 = v2
-- **Pre-validation bar (E6):** PF ≥ 1.1, trades ≥ 100, MaxDD ≤ 25% (หลังหัก commission)
+- **Pre-validation bar (E6):** base PF ≥ 1.1 **และ** stress PF ≥ 1.0, trades ≥ 100, MaxDD ≤ 25% (หลังหัก commission)
 - ไม่ผ่าน → หยุด รายงาน Owner (V3) — ห้ามเพิ่ม variant / ห้ามปรับพารามิเตอร์
+
+## Data limitation (T-021, 2026-10-12) — **Owner อนุมัติ R1–R3 ตามที่เสนอ (2026-10-12)**
+**ข้อเท็จจริง:** IC demo มี real ticks XAUUSD เฉพาะ 2026-04 → 2026-10 • ปี 2023–2024 tester ตกไปใช้ "every tick" สังเคราะห์จากแท่ง M1 (History Quality 0% real) ได้ผลเท่า Model=1 ±1% (426/426 ไม้ตรงกัน, exit type ตรงกันทุกไม้)
+**ผลที่ตามมา:** Model=4 ในช่วง in-sample/validation ไม่ได้ให้ข้อมูลเพิ่ม — แต่ช่วง **OOS (2026-01→09) มี real ticks ตั้งแต่ เม.ย.** = ใช้ตรวจ execution จริงได้ตอนท้าย
+
+| # | คำถาม | ข้อเสนอ Cowork | เหตุผล |
+|---|---|---|---|
+| R1 | Phase 3 research ใช้ข้อมูลแบบไหน | **Model=1 + cost stress +20 points/round turn** (≈ p95 spread ทองของ IC) • variant ต้องผ่าน bar ทั้ง base (PF ≥ 1.1) และ stress (PF ≥ 1.0) | เปรียบเทียบ variant ต่อกันได้ยุติธรรม; stress แทนความเสี่ยง spread/slippage ที่ M1 มองไม่เห็น |
+| R2 | real ticks อยู่ตรงไหนในแผน | ย้ายไปเป็น **เงื่อนไข Phase 4: OOS 2026-04→09 ด้วย real ticks (รันครั้งเดียว)** + Phase 5 demo forward | ข้อมูลจริงที่มีอยู่ตรงกับช่วง holdout พอดี — ไม่ต้องลงแรงหา data ภายนอกก่อนรู้ว่ามีกลยุทธ์ที่คุ้มค่า |
+| R3 | นำเข้า tick data ภายนอก (Dukascopy ฯลฯ) เป็น custom symbol | **ยังไม่ทำ** — ทำเฉพาะถ้า v2 ผ่าน validation แล้วต้องการความมั่นใจเพิ่ม | งานใหญ่ + spread/commission ของแหล่งอื่นไม่ใช่ของ IC ต้องปรับอีกชั้น |
