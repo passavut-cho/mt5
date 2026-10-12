@@ -33,6 +33,7 @@ private:
    int             m_h_slow;
    int             m_h_adx;
    int             m_h_atr;
+   int             m_h_view;               // iCustom แสดงสี EMA ใน visual mode — display only
 
    ENUM_SIGNAL_DIR m_raw_cross;            // cross ล่าสุดที่ Evaluate เจอ (ก่อนผ่าน filter) ใช้เป็น exit S3
 
@@ -66,7 +67,7 @@ CEMACrossSignal::CEMACrossSignal()
      m_sl_atr_mult(0), m_tp_r_mult(0), m_session_start_hour(0), m_session_end_hour(0),
      m_time_exit_hhmm(0), m_friday_cutoff_hour(0), m_configured(false),
      m_h_fast(INVALID_HANDLE), m_h_slow(INVALID_HANDLE), m_h_adx(INVALID_HANDLE), m_h_atr(INVALID_HANDLE),
-     m_raw_cross(SIGNAL_NONE)
+     m_h_view(INVALID_HANDLE), m_raw_cross(SIGNAL_NONE)
   {
   }
 
@@ -117,8 +118,14 @@ bool CEMACrossSignal::Init(const string symbol, const ENUM_TIMEFRAMES tf, CLogge
    m_tf     = tf;
    Deinit();   // กัน handle รั่วถ้า Init ซ้ำ
 
+   //--- visual mode: ซ่อน iMA 2 ตัวของ signal แล้วโชว์ indicator คนละสีแทน (display only)
+   const bool visual = (bool)MQLInfoInteger(MQL_VISUAL_MODE);
+   if(visual)
+      TesterHideIndicators(true);
    m_h_fast = iMA(symbol, tf, m_fast_period, 0, MODE_EMA, PRICE_CLOSE);
    m_h_slow = iMA(symbol, tf, m_slow_period, 0, MODE_EMA, PRICE_CLOSE);
+   if(visual)
+      TesterHideIndicators(false);
    m_h_adx  = iADX(symbol, tf, m_adx_period);
    m_h_atr  = iATR(symbol, tf, m_atr_period);
    if(m_h_fast == INVALID_HANDLE || m_h_slow == INVALID_HANDLE ||
@@ -127,6 +134,14 @@ bool CEMACrossSignal::Init(const string symbol, const ENUM_TIMEFRAMES tf, CLogge
       m_log.Error(StringFormat("สร้าง indicator handle ล้มเหลว err=%d", GetLastError()));
       Deinit();
       return(false);
+     }
+
+   //--- handle นี้มีไว้ให้ tester วาดเส้นเท่านั้น ห้ามอ่านค่ามาตัดสินเทรด; ล้มเหลวไม่กระทบ signal
+   if(visual)
+     {
+      m_h_view = iCustom(symbol, tf, "SmartEA\\SmartEA_EMAPair", m_fast_period, m_slow_period);
+      if(m_h_view == INVALID_HANDLE)
+         m_log.Warn(StringFormat("visual: สร้าง SmartEA_EMAPair ไม่ได้ (เส้น EMA จะไม่มีสี) err=%d", GetLastError()));
      }
 
    m_log.Info(StringFormat("CEMACrossSignal init %s %s EMA %d/%d ADX(%d)>=%.1f ATR(%d)x%.2f TP %.1fR session %02d-%02d exit %04d friCut %02d",
@@ -143,6 +158,7 @@ void CEMACrossSignal::Deinit()
    if(m_h_slow != INVALID_HANDLE) { IndicatorRelease(m_h_slow); m_h_slow = INVALID_HANDLE; }
    if(m_h_adx  != INVALID_HANDLE) { IndicatorRelease(m_h_adx);  m_h_adx  = INVALID_HANDLE; }
    if(m_h_atr  != INVALID_HANDLE) { IndicatorRelease(m_h_atr);  m_h_atr  = INVALID_HANDLE; }
+   if(m_h_view != INVALID_HANDLE) { IndicatorRelease(m_h_view); m_h_view = INVALID_HANDLE; }
   }
 
 //+------------------------------------------------------------------+

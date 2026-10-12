@@ -7,6 +7,7 @@
 #property version   "1.00"   // รูปแบบ x.yy; ใช้ git tag บอก phase แทน
 #property description "SmartEA — EMA 9/21 cross + ADX filter (spec v1)"
 #property tester_file "SmartEA\\holidays.csv"   // ให้ Strategy Tester คัดลอกไฟล์วันหยุดไปด้วย (S9)
+#property tester_indicator "SmartEA\\SmartEA_EMAPair.ex5"   // แสดงสี EMA ใน visual mode (display only)
 
 #include <SmartEA/Core/Types.mqh>
 #include <SmartEA/Core/Logger.mqh>
