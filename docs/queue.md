@@ -38,7 +38,7 @@ depends: T-001
 goal: สร้าง tests/tester-ini/core_smoke.ini (XAUUSD M15 2024.01.01-2024.12.31, Model=1, Leverage=1:500, Deposit=10000, ExpertParameters=core_smoke.set) + tests/setfiles/core_smoke.set (InpMaxSpreadPoints=20, ค่าอื่น default) แล้วรัน scripts/run_backtest.ps1 -Ini core_smoke จนได้ report ใน data/reports/ และไม่มีบรรทัด error/critical จาก SmartEA ใน tester journal; transcript ต้องแสดงบรรทัด "New day ... breaker ที่ equity<=" ของวันแรกที่ balance ต้นวัน = 10000; backtest-analyst สรุปลง data/reports/SmartEA_core_smoke.summary.md
 
 ## T-004 · P1 · /gate Phase 1
-status: WAIT_OWNER
+status: DONE c341365
 needs: owner
 depends: T-002, T-003
 goal: Owner สั่ง `/gate` ใน session interactive — gate ต้องถามยืนยันก่อนเลื่อน Phase เสมอ
