@@ -1,6 +1,6 @@
 # Project Status
 
-**Current phase:** 1 — Core Framework (เริ่มตามคำสั่ง Owner 2026-10-12 ขณะที่ P0 gate ยังเหลือ 3 ข้อด้านล่าง)
+**Current phase:** 2 — Strategy v1 (EMA 9/21 + ADX) — Phase 1 gate ผ่าน 2026-10-12 (tag p1-done, Owner อนุมัติ)
 **Last updated:** 2026-10-12
 **Broker เป้าหมาย:** IC Markets (Raw Trading Ltd, FSA Seychelles) — demo บัญชี Raw
 
@@ -25,7 +25,10 @@
 - G1.3: compile 0/0 ทั้ง 3 ไฟล์ • risk-guardian PASS • qa-reviewer ไม่มี BLOCKER • เพิ่ม test D4 (7 เคส สูตรล้วน) ใน RiskSelfTest
 - qa-reviewer MINOR ที่ยังไม่แก้ (deferred): SL normalize digits vs tick size, `actual_risk` ใช้ lot ที่ขอ (ไม่ใช่ `ResultVolume`) และไม่มี fallback ถ้า `ResultPrice()==0`, เคสขอบ D4 พึ่ง floating point, `intent.reason` เป็น order comment ควร ≤31 ตัวอักษร, `CountPositions` ซ้ำ 2 ที่, test D4/D6 ยังไม่ครอบคลุม end-to-end (CalcLot/ActualRisk/netting)
 
-## Phase 1 — Next
+## Phase 1 — GATE PASSED (2026-10-12)
+- compile 0/0 • RiskSelfTest 42/0 • core_smoke 1 ปี (0 trades, journal สะอาด, breaker 9700) • risk-guardian PASS • qa-reviewer no BLOCKER
+
+## Phase 1 — Next (เก็บไว้อ้างอิง)
 > ตั้งแต่ 2026-10-12 งานของ Code/CLI ย้ายไปอยู่ใน `docs/queue.md` (T-002 … T-005) — ส่วนนี้เป็นสรุป
 1. ✅ RiskSelfTest รอบ 2 (หลัง G1.3) บน IC demo → pass=42 fail=0 `SELFTEST: PASS` (2026-10-12) รวมชุด D4 7 กรณี
 1b. ✅ SymbolSpecDump v1.10 → `data/files/specs_ICMarketsSC-Demo.tsv` (HEDGING, 100 oz, spread p95 11 pts) — สรุปใน docs/research/broker-icmarkets.md
@@ -36,7 +39,7 @@
 5. `/gate`
 
 ## Blockers / Open questions
-- ⚠️ report core_smoke แสดง leverage **1:100** ทั้งที่ `core_smoke.ini` ตั้ง `Leverage=500` (smoke.ini ก็เหมือนกัน) → tester ไม่รับ Leverage จาก ini หรือใช้ค่าของ account — ต้องตรวจก่อน T-008 (margin มีผลต่อ lot ทอง)
+- ℹ️ Tester ini ต้องเขียน `Leverage=1:500` (รูปแบบ `Leverage=500` ถูกเพิกเฉย → core_smoke รันที่ 1:100) — แก้ ini ทุกไฟล์แล้ว 2026-10-12; ไม่กระทบผล G1.2 เพราะ 0 ไม้
 - ℹ️ Model=1 ใช้ได้เฉพาะ smoke; gate Phase 3+ ต้อง real ticks (Model=4)
 - ⚠️ IC demo balance = **500 USD** (จาก RiskSelfTest ชุด B) → ที่ risk 1% ทองเปิดไม้ไม่ได้ถ้า SL ≥ ~$5 (lot < 0.01) → T-006 ให้ Owner ตั้งเป็น 10,000 ก่อน Phase 5
 - ✅ Spec EMA+ADX v1 APPROVED (S1–S8) — implement ได้หลัง `/gate` Phase 1 (T-007)

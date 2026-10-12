@@ -35,7 +35,7 @@ goal: Phas ลาก RiskSelfTest ลง chart XAUUSD (IC demo) → `SELFTEST: P
 status: DONE 19bb831
 needs: mt5-closed
 depends: T-001
-goal: สร้าง tests/tester-ini/core_smoke.ini (XAUUSD M15 2024.01.01-2024.12.31, Model=1, Leverage=500, Deposit=10000, ExpertParameters=core_smoke.set) + tests/setfiles/core_smoke.set (InpMaxSpreadPoints=20, ค่าอื่น default) แล้วรัน scripts/run_backtest.ps1 -Ini core_smoke จนได้ report ใน data/reports/ และไม่มีบรรทัด error/critical จาก SmartEA ใน tester journal; transcript ต้องแสดงบรรทัด "New day ... breaker ที่ equity<=" ของวันแรกที่ balance ต้นวัน = 10000; backtest-analyst สรุปลง data/reports/SmartEA_core_smoke.summary.md
+goal: สร้าง tests/tester-ini/core_smoke.ini (XAUUSD M15 2024.01.01-2024.12.31, Model=1, Leverage=1:500, Deposit=10000, ExpertParameters=core_smoke.set) + tests/setfiles/core_smoke.set (InpMaxSpreadPoints=20, ค่าอื่น default) แล้วรัน scripts/run_backtest.ps1 -Ini core_smoke จนได้ report ใน data/reports/ และไม่มีบรรทัด error/critical จาก SmartEA ใน tester journal; transcript ต้องแสดงบรรทัด "New day ... breaker ที่ equity<=" ของวันแรกที่ balance ต้นวัน = 10000; backtest-analyst สรุปลง data/reports/SmartEA_core_smoke.summary.md
 
 ## T-004 · P1 · /gate Phase 1
 status: WAIT_OWNER
@@ -59,10 +59,22 @@ goal: Owner รีเซ็ต/เปิด IC demo ใหม่ให้ balanc
 status: READY
 needs: none
 depends: T-004
-goal: สร้าง src/Include/Signals/EMACrossSignal.mqh (CEMACrossSignal : CSignalBase รวม ADX+DI filter และ ATR SL ตาม spec ข้อ 2–4) และต่อเข้า SmartEA.mq5 ด้วย input ตาม spec ข้อ 7 รวม session S1, opposite-cross exit/reverse S3, SL<2×spread ไม่เข้า S4, time exit 23:30 S6, Friday cutoff S7 — ห้ามแตะ src/Include/Core/RiskManager.mqh และ Config/; ถ้าต้องแก้ Core ส่วนอื่นให้บันทึกเหตุผลใน ADR 0003 ก่อน. สร้าง tests/setfiles/ema_v1.set (InpMaxSpreadPoints=20) + tests/tester-ini/ema_v1.ini (XAUUSD M15 2023.01.01-2024.12.31, Model=1, Leverage=500, Deposit=10000). จบเมื่อ transcript แสดง compile.ps1 PASS 0/0, risk-guardian VERDICT: PASS, qa-reviewer ไม่มี BLOCKER, STATUS.md อัปเดต, git push สำเร็จพร้อม hash
+goal: สร้าง src/Include/Signals/EMACrossSignal.mqh (CEMACrossSignal : CSignalBase รวม ADX+DI filter และ ATR SL ตาม spec ข้อ 2–4) และต่อเข้า SmartEA.mq5 ด้วย input ตาม spec ข้อ 7 รวม session S1, opposite-cross exit/reverse S3, SL<2×spread ไม่เข้า S4, time exit 23:30 S6, Friday cutoff S7 — ห้ามแตะ src/Include/Core/RiskManager.mqh และ Config/; ถ้าต้องแก้ Core ส่วนอื่นให้บันทึกเหตุผลใน ADR 0003 ก่อน. สร้าง tests/setfiles/ema_v1.set (InpMaxSpreadPoints=20) + tests/tester-ini/ema_v1.ini (XAUUSD M15 2023.01.01-2024.12.31, Model=1, Leverage=1:500, Deposit=10000). จบเมื่อ transcript แสดง compile.ps1 PASS 0/0, risk-guardian VERDICT: PASS, qa-reviewer ไม่มี BLOCKER, STATUS.md อัปเดต, git push สำเร็จพร้อม hash
 
 ## T-008 · P2 · Backtest ema_v1 in-sample + วิเคราะห์
 status: READY
 needs: mt5-closed
 depends: T-007
 goal: รัน scripts/run_backtest.ps1 -Ini ema_v1 ได้ report ใน data/reports/; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1.summary.md ตาม spec ข้อ 9 (จำนวนไม้ ≥ 100?, ไม่มีไม้นอก session, ไม่มีไม้ข้าม 23:30, ทุกไม้มี SL) พร้อม metric ครบ; ห้ามปรับพารามิเตอร์เพื่อให้ผลดีขึ้น — ถ้าไม่ผ่านเกณฑ์ให้ BLOCKED แล้วรายงาน
+
+## T-009 · P2 · Integration test: risk ทำงานจริงเมื่อมีไม้
+status: READY
+needs: mt5-closed
+depends: T-008
+goal: สร้าง tests/setfiles/ema_v1_risktest.set (เหมือน ema_v1.set แต่ InpDailyLossPct=0.5 เพื่อบังคับให้ breaker ทำงานบ่อย — ค่านี้ต่ำกว่าเพดาน 3% จึงไม่ฝ่ากฎ) + tests/tester-ini/ema_v1_risktest.ini (ช่วง 2024.01.01-2024.03.31) แล้วรัน backtest; transcript ต้องแสดงจาก journal: (1) ตัวอย่างบรรทัด CalcLot ที่ lot = floor(risk/(loss_per_lot+7)) ถูกต้อง 3 ไม้ (คำนวณมือเทียบ) (2) บรรทัด daily loss breaker / D4 pre-trade ปฏิเสธไม้อย่างน้อย 1 ครั้ง (3) ไม่มีวันไหนที่ขาดทุนเกิน 0.5% + 1 ไม้ (4) ทุก deal มี SL; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1_risktest.summary.md
+
+## T-010 · P2 · ปรับการ normalize SL ให้ใช้ฟังก์ชันเดียว (minor จาก gate review P1)
+status: READY
+needs: risk-edit
+depends: T-004
+goal: RiskManager.CalcLot (RiskManager.mqh:404) ใช้ NormalizeDouble(digits) แต่ TradeManager ใช้ NormPrice (ปัดตาม tick_size) → ให้ทั้งสองชั้นใช้ helper เดียวที่ปัดตาม tick_size แบบ **ห่างจาก entry ไม่ได้** (ปัด SL เข้าหา entry หรือคำนวณ lot จาก SL ที่ normalize แล้วจริง) เพื่อไม่ให้ risk เกิน 1% บน symbol ที่ tick_size ≠ point; XAUUSD ที่ IC (tick 0.01 = point) ไม่เปลี่ยนผล. เพิ่ม test ใน RiskSelfTest ด้วย tick_size สมมุติ 0.05. จบเมื่อ compile 0/0, risk-guardian PASS, push สำเร็จพร้อม hash — ทำใน session interactive (ไฟล์ risk ตั้ง ask)
