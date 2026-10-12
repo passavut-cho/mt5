@@ -68,7 +68,7 @@ depends: T-007
 goal: รัน scripts/run_backtest.ps1 -Ini ema_v1 ได้ report ใน data/reports/; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1.summary.md ตาม spec ข้อ 9 (จำนวนไม้ ≥ 100?, ไม่มีไม้นอก session, ไม่มีไม้ข้าม 23:30, ทุกไม้มี SL) พร้อม metric ครบ; ห้ามปรับพารามิเตอร์เพื่อให้ผลดีขึ้น — ถ้าไม่ผ่านเกณฑ์ให้ BLOCKED แล้วรายงาน
 
 ## T-009 · P2 · Integration test: risk ทำงานจริงเมื่อมีไม้
-status: READY
+status: BLOCKED (2) ไม่มี D4 reject/breaker ใน journal: risk 0.5/daily 1.5 → 55/56 สัญญาณเปิดไม้ (ใกล้สุด 03-19 headroom +5.51) ข้อ 1,3,4 ผ่าน — ต้อง Owner ตัดสินค่า test ที่บังคับ reject (เช่น DailyLoss 0.75–1.0) หรือใช้ RiskSelfTest
 needs: mt5-closed
 depends: T-014
 goal: [แก้โดย Cowork 2026-10-12 — รอบแรก BLOCKED เพราะ Cowork ออกแบบผิด: daily loss 0.5% < risk 1% ทำให้ D4 ปฏิเสธทุกไม้] แก้ tests/setfiles/ema_v1_risktest.set เป็น **InpRiskPct=0.5 และ InpDailyLossPct=1.5** (ทั้งคู่ต่ำกว่าเพดาน 1%/3% จึงไม่ฝ่ากฎ — ขาดทุน 2 ไม้ในวันเดียวแล้ว D4 ต้องปฏิเสธไม้ที่ 3) + tests/tester-ini/ema_v1_risktest.ini (ช่วง 2024.01.01-2024.03.31) แล้วรัน backtest; transcript ต้องแสดงจาก journal: (1) ตัวอย่างบรรทัด CalcLot ที่ lot = floor(risk/(loss_per_lot+7)) ถูกต้อง 3 ไม้ (คำนวณมือเทียบ) (2) บรรทัด daily loss breaker / D4 pre-trade ปฏิเสธไม้อย่างน้อย 1 ครั้ง (3) ไม่มีวันไหนที่ขาดทุนเกิน 1.5% ของ balance ต้นวัน (ยกเว้น slippage/gap ที่ต้องรายงานเป็นรายวัน) (4) ทุก deal มี SL; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1_risktest.summary.md

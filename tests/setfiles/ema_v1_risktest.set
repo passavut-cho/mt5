@@ -1,7 +1,7 @@
 InpAllowLive=false
 InpMagic=260101
-InpRiskPct=1.0
-InpDailyLossPct=0.5
+InpRiskPct=0.5
+InpDailyLossPct=1.5
 InpMaxPositions=1
 InpCommissionPerLot=7.0
 InpMaxSpreadPoints=20
