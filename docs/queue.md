@@ -56,7 +56,7 @@ depends: —
 goal: Owner รีเซ็ต/เปิด IC demo ใหม่ให้ balance = 10,000 USD, leverage 1:500, Raw, hedging (ตอนนี้ 500 USD → ทองเปิดไม่ได้เลยที่ SL ≥ $5 เพราะ lot < 0.01) แล้วแจ้ง Cowork
 
 ## T-007 · P2 · Implement EMA+ADX v1 ตาม spec
-status: READY
+status: DONE 320854f
 needs: none
 depends: T-004
 goal: สร้าง src/Include/Signals/EMACrossSignal.mqh (CEMACrossSignal : CSignalBase รวม ADX+DI filter และ ATR SL ตาม spec ข้อ 2–4) และต่อเข้า SmartEA.mq5 ด้วย input ตาม spec ข้อ 7 รวม session S1, opposite-cross exit/reverse S3, SL<2×spread ไม่เข้า S4, time exit 23:30 S6, Friday cutoff S7 — ห้ามแตะ src/Include/Core/RiskManager.mqh และ Config/; ถ้าต้องแก้ Core ส่วนอื่นให้บันทึกเหตุผลใน ADR 0003 ก่อน. สร้าง tests/setfiles/ema_v1.set (InpMaxSpreadPoints=20) + tests/tester-ini/ema_v1.ini (XAUUSD M15 2023.01.01-2024.12.31, Model=1, Leverage=1:500, Deposit=10000). จบเมื่อ transcript แสดง compile.ps1 PASS 0/0, risk-guardian VERDICT: PASS, qa-reviewer ไม่มี BLOCKER, STATUS.md อัปเดต, git push สำเร็จพร้อม hash
