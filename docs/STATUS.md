@@ -43,6 +43,9 @@
 - **T-007 (2026-10-12):** CEMACrossSignal (Signals/EMACrossSignal.mqh) + ต่อเข้า SmartEA: S1 session, S2 ADX/DI, S3 ปิดสวนทางแล้วเข้าใหม่ถ้าผ่าน filter, S4 ATR SL (ไม่เข้าถ้า <2×spread), S5 2R, S6 time exit 23:30 (ตรวจทุก tick), S7 ศุกร์ • ไม่แตะ RiskManager/Config/Core (ไม่ต้องมี ADR 0003) • compile 0/0 • risk-guardian PASS • qa-reviewer no BLOCKER • commit 320854f • ema_v1.set + ema_v1.ini พร้อม รอ T-008
 - qa MINOR ที่ยังไม่แก้: time exit ไม่ทำงานถ้าถือข้ามเที่ยงคืน (hhmm>=2330 เท่านั้น), Configure ไม่เตือนเมื่อ exit < session end, ไม่มี log DEBUG ตอน CopyBuffer ล้มเหลว
 
+- **T-008 (2026-10-12): BLOCKED** — backtest ema_v1 in-sample 2023–2024 (Model=1) รันได้ report จริง: 440 ไม้, net −3,069 (ก่อนหัก commission ~−711), PF 0.85, DD equity 38%, win 33% • long PF 1.15 / short PF 0.65 • risk/ไม้ ≤1.0000% ✅, daily loss สูงสุด ~2.9% ✅, D4 reject 4 ครั้ง, journal สะอาด, ทุกไม้มี SL, ไม่มีไม้นอก session • **FAIL: 5 ไม้ข้าม 23:30** (2023.11.23, 2024.02.19, 2024.06.19, 2024.11.28, 2024.12.24 — น่าจะ S6 ไม่ปิดเมื่อไม่มีแท่ง/tick ที่ 23:30 ยังไม่ยืนยันในโค้ด) • TP≠2×SL 24 ไม้ (ต้องให้ strategy-dev ยืนยัน) • ไม่ได้ปรับพารามิเตอร์ • สรุป `data/reports/SmartEA_ema_v1.summary.md`
+- **รอ Owner:** (1) ตัดสินแก้ S6 (bug logic ใน EMACrossSignal) และ spec v2 เพราะไม่มี edge ใน in-sample (short ขาดทุนหนัก) (2) ตรวจ visual 10 ไม้ (3) T-009 depends T-008 จึงยังไม่ทำ
+
 ## Blockers / Open questions
 - ℹ️ Tester ini ต้องเขียน `Leverage=1:500` (รูปแบบ `Leverage=500` ถูกเพิกเฉย → core_smoke รันที่ 1:100) — แก้ ini ทุกไฟล์แล้ว 2026-10-12; ไม่กระทบผล G1.2 เพราะ 0 ไม้
 - ℹ️ Model=1 ใช้ได้เฉพาะ smoke; gate Phase 3+ ต้อง real ticks (Model=4)
