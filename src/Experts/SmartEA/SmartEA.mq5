@@ -148,19 +148,49 @@ ENUM_SIGNAL_DIR HeldDirection()
   }
 
 //+------------------------------------------------------------------+
-//| S6: ปิดทุก position เมื่อถึงเวลา (ตรวจทุก tick เพราะมีเวลาตายตัว)    |
+//| มี position ของ EA ที่เปิดก่อน 00:00 server ของวันนี้หรือไม่          |
+//| (ข้ามคืนทั้งที่ S6 ควรปิดแล้ว เช่น วันตลาดปิดเร็วไม่มี tick หลัง 23:30)  |
+//+------------------------------------------------------------------+
+bool HeldFromBeforeToday()
+  {
+   MqlDateTime t;
+   TimeToStruct(TimeTradeServer(), t);
+   t.hour = 0;
+   t.min  = 0;
+   t.sec  = 0;
+   const datetime day_start = StructToTime(t);
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+     {
+      if(PositionGetSymbol(i) != _Symbol)
+         continue;
+      if((ulong)PositionGetInteger(POSITION_MAGIC) != InpMagic)
+         continue;
+      if((datetime)PositionGetInteger(POSITION_TIME) < day_start)
+         return(true);
+     }
+   return(false);
+  }
+
+//+------------------------------------------------------------------+
+//| S6: ปิดทุก position เมื่อถึงเวลา หรือเมื่อถือข้ามวันมา               |
+//| (ตรวจทุก tick เพราะมีเวลาตายตัว)                                    |
 //| ถ้าปิดไม่สำเร็จ ลองใหม่ได้ไม่เกินทุก 5 วินาที กัน log ท่วม            |
 //+------------------------------------------------------------------+
 void CheckTimeExit()
   {
    static datetime last_try = 0;
-   if(!g_ema.TimeExitDue() || HeldDirection() == SIGNAL_NONE)
+   if(HeldDirection() == SIGNAL_NONE)
+      return;
+   const bool due   = g_ema.TimeExitDue();
+   const bool stale = !due && HeldFromBeforeToday();
+   if(!due && !stale)
       return;
    const datetime now = TimeCurrent();
    if(now - last_try < 5)
       return;
    last_try = now;
-   g_trade.CloseAll(StringFormat("time exit %04d (S6)", InpTimeExitHHMM));
+   g_trade.CloseAll(due ? StringFormat("time exit %04d (S6)", InpTimeExitHHMM)
+                        : "time exit: ถือข้ามวัน (S6)");
   }
 
 //+------------------------------------------------------------------+
