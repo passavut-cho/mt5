@@ -18,3 +18,5 @@ InpSessionStartHour=10
 InpSessionEndHour=23
 InpTimeExitHHMM=2330
 InpFridayCutoffHour=20
+InpUseHolidayFilter=true
+InpHolidayFile=SmartEA\holidays.csv

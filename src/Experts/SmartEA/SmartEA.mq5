@@ -6,6 +6,7 @@
 #property copyright "Phas"
 #property version   "1.00"   // รูปแบบ x.yy; ใช้ git tag บอก phase แทน
 #property description "SmartEA — EMA 9/21 cross + ADX filter (spec v1)"
+#property tester_file "SmartEA\\holidays.csv"   // ให้ Strategy Tester คัดลอกไฟล์วันหยุดไปด้วย (S9)
 
 #include <SmartEA/Core/Types.mqh>
 #include <SmartEA/Core/Logger.mqh>
@@ -14,6 +15,7 @@
 #include <SmartEA/Core/RiskManager.mqh>
 #include <SmartEA/Core/TradeManager.mqh>
 #include <SmartEA/Signals/EMACrossSignal.mqh>
+#include <SmartEA/Signals/HolidayFilter.mqh>
 
 //--- inputs
 input bool           InpAllowLive         = false;     // อนุญาตบัญชีจริง — ผู้ใช้เท่านั้นที่เปิดได้
@@ -38,12 +40,15 @@ input int            InpSessionStartHour  = 10;        // เปิดไม้�
 input int            InpSessionEndHour    = 23;        // ... ก่อนชั่วโมงนี้ (hour < end)
 input int            InpTimeExitHHMM      = 2330;      // ปิดทุก position เมื่อ server time >= HHMM (S6)
 input int            InpFridayCutoffHour  = 20;        // ศุกร์ไม่เปิดไม้ใหม่ตั้งแต่ชั่วโมงนี้ (S7)
+input bool           InpUseHolidayFilter  = true;      // ไม่เปิดไม้ใหม่ในวันที่อยู่ใน holiday file (S9)
+input string         InpHolidayFile       = "SmartEA\\holidays.csv";  // path ใต้ MQL5\Files
 
 CLogger        g_log;
 CBarClock      g_clock;
 CRiskManager   g_risk;
 CTradeManager  g_trade;
 CSignalBase   *g_signal = NULL;
+CHolidayFilter g_holiday;
 CEMACrossSignal *g_ema  = NULL;     // ตัวเดียวกับ g_signal (ไว้เรียก RawCross / TimeExitDue)
 
 //+------------------------------------------------------------------+
@@ -109,6 +114,15 @@ int OnInit()
       g_ema = NULL;
       g_signal = NULL;
       return(INIT_FAILED);
+     }
+
+   if(!g_holiday.Init(&g_log, InpHolidayFile, InpUseHolidayFilter))
+     {
+      g_signal.Deinit();
+      delete g_ema;
+      g_ema = NULL;
+      g_signal = NULL;
+      return(INIT_PARAMETERS_INCORRECT);
      }
 
    g_clock.Init(_Symbol, _Period);
@@ -271,6 +285,13 @@ void OnTick()
 
    if(intent.dir == SIGNAL_NONE)
       return;
+
+   string hol_why;
+   if(g_holiday.BlocksEntry(TimeTradeServer(), hol_why))
+     {
+      g_log.Trade("SKIP", StringFormat("%s : %s", intent.reason, hol_why));   // S9
+      return;
+     }
 
    if(!can_open)
      {

@@ -52,6 +52,8 @@
 
 - **T-013 (2026-10-12):** `tests/python/report_stats.py` อ่าน report .htm (UTF-16) จับคู่ in/out แล้วหัก commission/lot → net/PF/DD/expectancy แยก long/short + รายปี • ทดสอบกับ ema_v1.htm ได้ net −3,780.30 (PF 0.82, 440 ไม้, comm −711.27) ตรง summary เดิม • เพิ่ม `OnTester()` ใน SmartEA.mq5 (net หลังหัก commission, หักเพิ่มเฉพาะเมื่อทั้ง run ไม่มี commission บันทึก, คืน −1e9 ถ้า HistorySelect ล้ม) • อัปเดต backtest-analyst.md ให้รันสคริปต์ทุกครั้ง • compile 0/0 • risk-guardian PASS • qa-reviewer no BLOCKER (MAJOR เรื่องหักซ้ำแก้แล้ว) • OnTester ยังไม่เคยรันจริงใน tester — จะเห็นผลที่ T-014
 
+- **T-017 (2026-10-12):** Holiday filter S9 — `Signals/HolidayFilter.mqh` (CHolidayFilter) อ่าน `SmartEA\holidays.csv`, `#property tester_file`, input InpUseHolidayFilter/InpHolidayFile, บล็อกเฉพาะเปิดไม้ใหม่ (ไม่กระทบ exit), fail closed เมื่อไฟล์อ่านไม่ได้/ปีไม่อยู่ใน covered_years (Warn วันละครั้ง), log SKIP ทุกครั้ง • ไม่แตะ RiskManager/Config • compile 0/0 • risk-guardian PASS • qa-reviewer no BLOCKER • **ยังไม่ได้ยืนยันใน tester จริง** — T-014 ต้องเห็นบรรทัด "holiday filter: โหลด ... สำเร็จ" ใน journal ไม่งั้น EA ไม่เปิดไม้เลย • ค้าง MINOR: ไม่นับบรรทัด date เสีย, reload ล้มแล้วบล็อกทั้งวัน, SKIP log ทุกแท่งที่มีสัญญาณ
+
 ## Blockers / Open questions
 - ✅ RiskSelfTest หลัง T-010 บน IC demo: pass=70 fail=0 (2026-10-12)
 - ✅ S9 = (b) holiday file `data/files/holidays.csv` (2023–2026) + กฎอัปเดตทุกปี (CLAUDE.md) → T-017 implement, T-018 ปี 2027 ภายใน 15 ธ.ค.
