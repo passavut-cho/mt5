@@ -2,6 +2,7 @@
 
 **Current phase:** 3 — Validation — Phase 2 gate ผ่าน 2026-10-12 (tag p2-done, Owner อนุมัติ)
 **Last updated:** 2026-10-12
+**validation_looks (2025):** 0 • **OOS (2026) looks:** 0
 **Broker เป้าหมาย:** IC Markets (Raw Trading Ltd, FSA Seychelles) — demo บัญชี Raw
 
 ## Phase 0 — ค้าง (ต้องปิดก่อน /gate ของ Phase 1)

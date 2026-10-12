@@ -152,3 +152,33 @@ status: DONE ea8e5da (426 ไม้, net −3,777.38 เท่าเดิม; �
 needs: mt5-closed
 depends: —
 goal: ให้ visual mode แสดง EMA9 กับ EMA21 คนละสี **โดยไม่เปลี่ยน logic การเทรด**: (1) สร้าง src/Indicators/SmartEA_EMAPair.mq5 — indicator บน chart หลัก 2 plot: EMA fast (input period, default 9) สี clrDodgerBlue width 2, EMA slow (default 21) สี clrOrange width 2, คำนวณ EMA ของ close เหมือน iMA(MODE_EMA, PRICE_CLOSE) (2) ใน CEMACrossSignal::Init (EMACrossSignal.mqh:120-121) ถ้า MQLInfoInteger(MQL_VISUAL_MODE): เรียก TesterHideIndicators(true) ก่อนสร้าง iMA 2 ตัว และ TesterHideIndicators(false) หลังสร้าง (ADX/ATR ยังแสดงตามเดิม) แล้วสร้าง handle iCustom ของ "SmartEA\\SmartEA_EMAPair" ด้วย period เดียวกันเพื่อ "แสดงผลอย่างเดียว" — ห้ามใช้ค่าจาก iCustom ตัดสินใจเทรด, release handle ใน Deinit (3) SmartEA.mq5 เพิ่ม `#property tester_indicator "SmartEA\\SmartEA_EMAPair.ex5"` (4) junction MQL5\Indicators\SmartEA ต้องมีอยู่ (setup.ps1 ใหม่สร้างให้ — ถ้าไม่มีให้ BLOCKED "Owner ต้องรัน scripts/setup.ps1 ใหม่"). Acceptance: compile.ps1 PASS 0/0 ทุกไฟล์ (indicator compile ก่อน EA แล้ว), qa-reviewer ไม่มี BLOCKER, รัน run_backtest.ps1 -Ini ema_v1 แล้ว report_stats ต้องได้ **426 ไม้ และ net หลังหัก commission −3,777.38 เท่าเดิม** (พิสูจน์ว่าไม่กระทบ logic), push สำเร็จพร้อม hash
+
+## T-021 · P3 · 3a Calibration: v1 in-sample ด้วย real ticks (Model=4)
+status: READY
+needs: mt5-closed
+depends: —
+goal: สร้าง tests/tester-ini/ema_v1_ticks.ini (เหมือน ema_v1.ini แต่ Model=4, report SmartEA_ema_v1_ticks) ใช้ ema_v1.set เดิม ห้ามแก้พารามิเตอร์ → รัน (real ticks ครั้งแรกอาจโหลดนานมาก — ใช้ -TimeoutMin 240 ถ้าจำเป็น) → report_stats.py หัก commission → backtest-analyst เทียบกับ Model=1 (T-014): จำนวนไม้, PF, net, DD, avg win/loss, จำนวนไม้ที่ SL/TP ต่างกัน, slippage จาก TRADE RISK • สรุปลง data/reports/SmartEA_ema_v1_ticks.summary.md • **ห้ามรันช่วง 2025/2026** • ถ้า history real ticks ของ IC ไม่ครบช่วง 2023–2024 (ดู "History Quality"/journal) ให้ BLOCKED พร้อมรายงานช่วงที่มี
+
+## T-022 · P3 · Owner เลือก variant ของ spec v2
+status: DONE (Owner 2026-10-12: V1–V3 ตามที่เสนอ → spec-ema-adx-v2.md)
+needs: owner
+depends: —
+goal: อ่าน docs/strategy/v2-options.md แล้วตอบ V1–V3 → Cowork เขียน spec-ema-adx-v2.md + docs/strategy/experiments.md + งาน implement/backtest ลงคิว
+
+## T-023 · P3 · ตรวจ news.csv 2023–2024 กับแหล่งทางการ
+status: READY
+needs: none
+depends: —
+goal: data/files/news.csv (64 แถว: NFP 24, CPI 24, FOMC 16) Cowork เขียนจากความจำ — ตรวจทุกแถวกับ BLS release calendar (Employment Situation, CPI) และ federalreserve.gov FOMC calendars ปี 2023–2024 ด้วย WebSearch/WebFetch • แก้วันที่ผิดได้ (เป็นข้อมูล ไม่ใช่ค่า risk) แล้วเปลี่ยน verified เป็น `bls` / `fed` • ระวัง: FOMC 2024-11-07 เป็นวันพฤหัส, 2024-06-12 มีทั้ง CPI และ FOMC • ถ้าเข้าเว็บแหล่งทางการไม่ได้ให้ BLOCKED (ห้ามเดา) • บันทึกลิงก์แหล่งใน docs/research/news-calendar.md • จบเมื่อ push สำเร็จพร้อม hash
+
+## T-024 · P3 · Implement v2 feature flags (default = v1)
+status: READY
+needs: mt5-closed
+depends: T-023
+goal: implement ตาม docs/strategy/spec-ema-adx-v2.md ทุก flag (V2a HTF ใช้แท่ง H4 ที่ปิดแล้ว, V2b news filter + tester_file + fail closed, V2c no-reverse + re-entry bars, V2d opposite exit switch) ห้ามแตะ RiskManager/Config • สร้าง tests/setfiles/ema_v2a.set, ema_v2b.set, ema_v2c.set, ema_v2d.set (เปิดทีละ flag) • **Regression:** flags default + ema_v1.ini (Model=1) ต้องได้ 426 ไม้ net −3,777.38 เท่า T-014 • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER, push พร้อม hash
+
+## T-025 · P3 · Experiments E2–E5 (in-sample, real ticks)
+status: READY
+needs: mt5-closed
+depends: T-021, T-024
+goal: รัน ema_v2a/b/c/d.set แต่ละตัวบน in-sample 2023–2024 Model=4 (ini ใหม่แบบ ema_v1_ticks.ini) • report_stats.py หัก commission • เติมแถว E2–E5 ใน docs/strategy/experiments.md (trades, PF, net, MaxDD, ผลเทียบ E1 ตาม hypothesis) • **ห้ามแตะ 2025/2026, ห้ามปรับพารามิเตอร์, ห้ามสร้าง variant เพิ่ม** • จบเมื่อ push สำเร็จพร้อม hash (E6 = Owner/Cowork ตัดสินว่ารวม flag ไหน)

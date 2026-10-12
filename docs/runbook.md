@@ -47,7 +47,13 @@
 - สุ่มตรวจ 10 ไม้ในกราฟ visual mode ว่าเข้า/ออกตรง spec
 
 ## Phase 3 — Validation
-**งาน**
+> **แก้ไข 2026-10-12 (Cowork เสนอ, Owner อนุมัติพร้อม gate P2):** v1 ไม่มี edge ใน in-sample (PF หลังหัก comm 0.82) → Phase 3 แบ่งเป็น 3 ขั้น และ **ห้ามแตะ validation (2025) จนผ่านขั้น 3b**
+> - **3a Calibration** — รัน v1 in-sample ด้วย Model=4 (real ticks) เทียบ Model=1 → รู้ว่า 1-min OHLC คลาดเท่าไร (ข้อมูลเท่านั้น)
+> - **3b Strategy research (in-sample 2023–2024 เท่านั้น)** — spec v2 จาก `docs/strategy/v2-options.md`; ทุก variant ต้องเขียน hypothesis ก่อนรัน และบันทึกผลทุกตัว (รวมที่แพ้) ใน `docs/strategy/experiments.md` • จำกัด ≤ 6 variants ต่อรอบ
+> - **Pre-validation bar** (ต้องผ่านก่อนเปิด 2025): in-sample Model=4 หลังหัก commission **PF ≥ 1.1, trades ≥ 100, MaxDD ≤ 25%**
+> - **3c Validation** — เปิด 2025 ได้เฉพาะ variant ที่ผ่าน bar • **ทุกครั้งที่รันบน 2025 ต้องบวก `validation_looks` ใน STATUS.md** • ถ้า looks > 3 ให้ถือว่า 2025 ปนเปื้อน ต้องใช้ OOS 2026 ตัดสินแทน (และ OOS ยังห้ามแตะจน Phase 4)
+
+**งาน (3c)**
 - ทดสอบด้วย **real ticks (Model=4)** + spread/commission สมจริง
 - walk-forward (`tests/python/walk_forward.py`): แบ่ง train / validate / test ไม่ทับกัน
 - หลาย symbol / ช่วงเวลา (trend vs sideway)

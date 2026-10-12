@@ -49,6 +49,8 @@
 - ห้ามลบปีที่ผ่านมา (backtest ต้องใช้) • ถ้า backtest ช่วงที่ไม่อยู่ใน covered_years → EA จะไม่เปิดไม้ (fail closed) ต้องเติมไฟล์ก่อน
 - backtest-analyst: ไม้ที่ข้าม 23:30 ในวันที่ไม่อยู่ในไฟล์ = หลักฐานว่าต้องเพิ่มวันนั้น → รายงานใน ⚠️
 
+- **News calendar (`data/files/news.csv`, spec v2 V2b)** ใช้กติกาเดียวกับ holidays: วันเวลาเป็น **server time** (IC = New York + 7 ชม. คงที่ทุกฤดู) • `# covered_years:` fail closed • แหล่งหลัก: BLS release schedule (NFP, CPI) และ Federal Reserve FOMC calendar • ต้องเติมปีถัดไปพร้อม holidays (ภายใน 15 ธ.ค.) และ **ตรวจทุกต้นเดือน** เพราะวันประกาศเลื่อนได้ (เช่น government shutdown) • ก่อนใช้ข้อมูลช่วง validation/OOS ต้องเติมปีนั้นให้ครบก่อน
+
 ## โหมดการทำงาน 3 แบบ
 | ใคร | เครื่องมือ | ทำอะไร |
 |---|---|---|

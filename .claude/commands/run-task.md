@@ -16,4 +16,4 @@ argument-hint: [T-NNN — ว่าง = task แรกที่ทำได้]
    - สำเร็จ → `status: DONE <short-hash>` (hash ของ commit งาน) • อัปเดต STATUS.md • commit `[P<n>] <type>: T-NNN <สรุป>` + push
    - ติด → `status: BLOCKED <เหตุผลสั้น>` (เช่น permission ถูกปฏิเสธ, ต้องให้ Owner ตัดสินใจ) • commit งานที่เสร็จแล้ว + push
 7. พิมพ์ `QUEUE: T-NNN DONE <hash>` หรือ `QUEUE: T-NNN BLOCKED <เหตุผล>` แล้วตามด้วยรายงานท้ายรอบ
-ห้ามทำเกิน 1 task ต่อการเรียก • ห้ามเพิ่ม/ลบ/เรียงลำดับ task เอง (เป็นหน้าที่ Cowork/Owner) ยกเว้นเพิ่ม task ย่อยที่จำเป็นต่อท้ายพร้อม `status: WAIT_OWNER`
+ห้ามทำเกิน 1 task ต่อการเรียก • ห้ามเพิ่ม/ลบ/เรียงลำดับ task เอง (เป็นหน้าที่ Cowork/Owner) ยกเว้นเพิ่ม task ย่อยที่จำเป็นต่อท้ายพร้อม `status: WAIT_OWNER` โดยใช้เลข = เลข T สูงสุดในไฟล์ + 1 (ห้ามใช้เลขซ้ำ) • ห้ามแก้บรรทัดตัวอย่างรูปแบบด้านบนของ queue.md
