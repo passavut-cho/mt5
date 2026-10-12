@@ -68,10 +68,10 @@ depends: T-007
 goal: รัน scripts/run_backtest.ps1 -Ini ema_v1 ได้ report ใน data/reports/; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1.summary.md ตาม spec ข้อ 9 (จำนวนไม้ ≥ 100?, ไม่มีไม้นอก session, ไม่มีไม้ข้าม 23:30, ทุกไม้มี SL) พร้อม metric ครบ; ห้ามปรับพารามิเตอร์เพื่อให้ผลดีขึ้น — ถ้าไม่ผ่านเกณฑ์ให้ BLOCKED แล้วรายงาน
 
 ## T-009 · P2 · Integration test: risk ทำงานจริงเมื่อมีไม้
-status: BLOCKED InpRiskPct 1% > งบ daily loss 0.5% → D4 ปฏิเสธทุกไม้ (0 trades) ตรวจข้อ 1,3,4 ไม่ได้ (ดู data/reports/SmartEA_ema_v1_risktest.summary.md)
+status: READY
 needs: mt5-closed
 depends: T-014
-goal: สร้าง tests/setfiles/ema_v1_risktest.set (เหมือน ema_v1.set แต่ InpDailyLossPct=0.5 เพื่อบังคับให้ breaker ทำงานบ่อย — ค่านี้ต่ำกว่าเพดาน 3% จึงไม่ฝ่ากฎ) + tests/tester-ini/ema_v1_risktest.ini (ช่วง 2024.01.01-2024.03.31) แล้วรัน backtest; transcript ต้องแสดงจาก journal: (1) ตัวอย่างบรรทัด CalcLot ที่ lot = floor(risk/(loss_per_lot+7)) ถูกต้อง 3 ไม้ (คำนวณมือเทียบ) (2) บรรทัด daily loss breaker / D4 pre-trade ปฏิเสธไม้อย่างน้อย 1 ครั้ง (3) ไม่มีวันไหนที่ขาดทุนเกิน 0.5% + 1 ไม้ (4) ทุก deal มี SL; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1_risktest.summary.md
+goal: [แก้โดย Cowork 2026-10-12 — รอบแรก BLOCKED เพราะ Cowork ออกแบบผิด: daily loss 0.5% < risk 1% ทำให้ D4 ปฏิเสธทุกไม้] แก้ tests/setfiles/ema_v1_risktest.set เป็น **InpRiskPct=0.5 และ InpDailyLossPct=1.5** (ทั้งคู่ต่ำกว่าเพดาน 1%/3% จึงไม่ฝ่ากฎ — ขาดทุน 2 ไม้ในวันเดียวแล้ว D4 ต้องปฏิเสธไม้ที่ 3) + tests/tester-ini/ema_v1_risktest.ini (ช่วง 2024.01.01-2024.03.31) แล้วรัน backtest; transcript ต้องแสดงจาก journal: (1) ตัวอย่างบรรทัด CalcLot ที่ lot = floor(risk/(loss_per_lot+7)) ถูกต้อง 3 ไม้ (คำนวณมือเทียบ) (2) บรรทัด daily loss breaker / D4 pre-trade ปฏิเสธไม้อย่างน้อย 1 ครั้ง (3) ไม่มีวันไหนที่ขาดทุนเกิน 1.5% ของ balance ต้นวัน (ยกเว้น slippage/gap ที่ต้องรายงานเป็นรายวัน) (4) ทุก deal มี SL; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1_risktest.summary.md
 
 ## T-010 · P2 · ปรับการ normalize SL ให้ใช้ฟังก์ชันเดียว (minor จาก gate review P1)
 status: DONE 64bbf9b (RiskSelfTest บน IC demo pass=70 fail=0 — 2026-10-12)
@@ -112,10 +112,22 @@ depends: —
 goal: ดู docs/strategy/spec-ema-adx.md ข้อ 11 แล้วตอบ S9
 
 ## T-016 · P2 · Owner ตรวจ visual 10 ไม้
-status: WAIT_OWNER
+status: WAIT_OWNER (T-014 DONE — รายการ 10 ไม้พร้อมแล้ว)
 needs: owner
 depends: T-014
-goal: Owner เปิด Strategy Tester แบบ Visual กับ ema_v1 แล้วสุ่มดู 10 ไม้ (Cowork จะเลือกวันที่ให้จาก report ของ T-014) ว่า entry/SL/TP/exit ตรง spec ข้อ 2–4
+goal: Owner เปิด Strategy Tester แบบ Visual กับ ema_v1 แล้วดู 10 ไม้นี้ (Cowork สุ่มจาก report T-014, seed 42, แยกตามวิธีปิด) ว่า entry/SL/TP/exit ตรง spec ข้อ 2–4 — ตอบ ✅/❌ รายไม้
+| # | เปิด (server) | ฝั่ง | lot | entry | ปิด | exit | ตรวจอะไร |
+|---|---|---|---|---|---|---|---|
+| 1 | 2023.01.19 12:45 | sell | 0.27 | 1907.72 | 14:36 @1911.25 | SL | EMA9 ตัดลง EMA21 ที่แท่ง 12:30, ADX≥25, −DI>+DI |
+| 2 | 2023.04.26 18:30 | sell | 0.14 | 1995.36 | 23:30 @1989.60 | time exit | ปิดตอน 23:30 พอดี |
+| 3 | 2023.05.03 16:45 | buy | 0.25 | 2018.11 | 16:59 @2014.05 | SL | SL = ATR×1.5 |
+| 4 | 2023.05.10 21:30 | buy | 0.24 | 2031.06 | 23:30 @2031.14 | time exit | เข้า 21:30 ยังอยู่ใน session (<23:00) |
+| 5 | 2023.05.31 10:45 | sell | 0.29 | 1956.77 | 14:45 @1959.63 | opposite cross | มี cross ขึ้นที่แท่ง 14:30 แต่ไม่กลับฝั่ง (filter ไม่ผ่าน?) |
+| 6 | 2023.08.17 17:45 | sell | 0.20 | 1895.36 | 20:02 @1887.23 | TP | TP = 2×SL |
+| 7 | 2023.08.24 12:45 | sell | 0.38 | 1919.68 | 15:06 @1915.20 | TP | lot ใหญ่ (SL แคบ) |
+| 8 | 2023.10.06 15:30 | sell | 0.34 | 1819.46 | 15:30:40 @1814.96 | TP | **วัน NFP — เข้าตรงเวลาข่าว ถึง TP ใน 40 วินาที** |
+| 9 | 2024.07.09 13:15 | buy | 0.23 | 2363.98 | 14:08 @2360.67 | SL | |
+| 10 | 2024.11.01 11:00 | sell | 0.20 | 2749.70 | 11:15 @2752.54 | opposite cross | cross สวนภายใน 1 แท่ง (เข้า 11:00 ปิด 11:15) |
 
 ## T-017 · P2 · Holiday filter (spec S9)
 status: DONE 5259387
