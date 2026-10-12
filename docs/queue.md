@@ -100,7 +100,7 @@ depends: —
 goal: Strategy Tester ไม่หัก commission ของ IC Raw (คอลัมน์ Commission = 0) → สร้าง tests/python/report_stats.py ที่อ่าน report .htm ของ MT5 (UTF-16) แล้วคำนวณ net/PF/DD/expectancy **หลังหัก InpCommissionPerLot × volume ต่อไม้** + แยก long/short + รายปี, ออกเป็น markdown; และเพิ่ม `OnTester()` ใน SmartEA.mq5 คืนค่า net หลังหัก commission (ใช้เป็นเกณฑ์ optimize ใน Phase 4). ทดสอบกับ SmartEA_ema_v1.htm ต้องได้ net ≈ −3,780 (ตาม summary เดิม). backtest-analyst ต้องใช้สคริปต์นี้ทุกครั้งหลังจากนี้ (อัปเดต .claude/agents/backtest-analyst.md). จบเมื่อ compile 0/0, push สำเร็จพร้อม hash
 
 ## T-014 · P2 · รัน ema_v1 in-sample ซ้ำหลังแก้ระบบ
-status: READY
+status: DONE HASHX
 needs: mt5-closed
 depends: T-011, T-012, T-013, T-015, T-017
 goal: เหมือน T-008 ทุกข้อ (พารามิเตอร์เดิมทั้งหมด ห้ามปรับ) + ใช้ tests/python/report_stats.py รายงาน metric หลังหัก commission. เกณฑ์ spec ข้อ 9 (ตามที่ Owner อนุมัติใน S9). **PF/DD ไม่ใช่เกณฑ์ Phase 2** — รายงานเป็นข้อมูลให้ Owner เท่านั้น. ถ้าเกณฑ์ข้อ 9 ครบยกเว้นข้อ visual → DONE แล้วให้ T-016 ต่อ
