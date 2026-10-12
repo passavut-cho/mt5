@@ -172,7 +172,7 @@ depends: —
 goal: data/files/news.csv (64 แถว: NFP 24, CPI 24, FOMC 16) Cowork เขียนจากความจำ — ตรวจทุกแถวกับ BLS release calendar (Employment Situation, CPI) และ federalreserve.gov FOMC calendars ปี 2023–2024 ด้วย WebSearch/WebFetch • แก้วันที่ผิดได้ (เป็นข้อมูล ไม่ใช่ค่า risk) แล้วเปลี่ยน verified เป็น `bls` / `fed` • ระวัง: FOMC 2024-11-07 เป็นวันพฤหัส, 2024-06-12 มีทั้ง CPI และ FOMC • ถ้าเข้าเว็บแหล่งทางการไม่ได้ให้ BLOCKED (ห้ามเดา) • บันทึกลิงก์แหล่งใน docs/research/news-calendar.md • จบเมื่อ push สำเร็จพร้อม hash
 
 ## T-024 · P3 · Implement v2 feature flags (default = v1)
-status: READY
+status: DONE 403b174
 needs: mt5-closed
 depends: T-023
 goal: implement ตาม docs/strategy/spec-ema-adx-v2.md ทุก flag (V2a HTF ใช้แท่ง H4 ที่ปิดแล้ว, V2b news filter + tester_file + fail closed, V2c no-reverse + re-entry bars, V2d opposite exit switch) ห้ามแตะ RiskManager/Config • สร้าง tests/setfiles/ema_v2a.set, ema_v2b.set, ema_v2c.set, ema_v2d.set (เปิดทีละ flag) • **Regression:** flags default + ema_v1.ini (Model=1) ต้องได้ 426 ไม้ net −3,777.38 เท่า T-014 • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER, push พร้อม hash
