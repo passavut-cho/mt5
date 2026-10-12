@@ -88,7 +88,7 @@ depends: —
 goal: สาเหตุ (Cowork ตรวจโค้ด): `CEMACrossSignal::TimeExitDue()` (EMACrossSignal.mqh:181) เช็คแค่ `hour*100+min >= 2330` ของ "วันนี้" — วันตลาดปิดเร็ว (Thanksgiving, Juneteenth, Christmas Eve, Presidents Day) ไม่มี tick หลัง 23:30 พอ tick แรกของวันถัดไป (~01:00) ค่า 0100 < 2330 จึงไม่ปิด. แก้: time exit ต้องเป็นจริงเมื่อ (a) เวลา server >= InpTimeExitHHMM **หรือ** (b) มี position ของ EA ที่เปิดก่อน 00:00 server ของวันนี้ → ปิดทันทีที่ tick แรก. ห้ามแก้พารามิเตอร์กลยุทธ์อื่น. จบเมื่อ compile 0/0, qa-reviewer ไม่มี BLOCKER, push สำเร็จพร้อม hash
 
 ## T-012 · P2 · ตรวจ 24 ไม้ที่ TP ≠ 2 × SL
-status: IN_PROGRESS
+status: DONE 64be455 (ผล: docs/research/ema_v1.tp-check.md — data/reports ถูก gitignore)
 needs: none
 depends: —
 goal: อ่าน data/reports/SmartEA_ema_v1.htm + โค้ด แล้วอธิบายสาเหตุที่ 24/440 ไม้มี |TP − 2×SL| > 0.02 (สมมุติฐาน: SL/TP คิดจากราคาอ้างอิงตอนคำนวณ แต่ fill ต่าง หรือผลจาก T-010 ที่ปัด SL เข้าหา entry แต่ไม่ได้ปัด TP ให้สอดคล้อง). ถ้าเป็นบั๊ก → แก้ให้ TP = entry_จริง ± 2 × |entry_จริง − SL| บน tick grid (ไม่แตะ RiskManager — ถ้าต้องแตะให้ BLOCKED). บันทึกผลลง data/reports/SmartEA_ema_v1.tp-check.md. จบเมื่อ compile 0/0 (ถ้าแก้โค้ด), push สำเร็จพร้อม hash
