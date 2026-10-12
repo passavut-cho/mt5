@@ -46,7 +46,11 @@
 - **T-008 (2026-10-12): BLOCKED** — backtest ema_v1 in-sample 2023–2024 (Model=1) รันได้ report จริง: 440 ไม้, net −3,069 (ก่อนหัก commission ~−711), PF 0.85, DD equity 38%, win 33% • long PF 1.15 / short PF 0.65 • risk/ไม้ ≤1.0000% ✅, daily loss สูงสุด ~2.9% ✅, D4 reject 4 ครั้ง, journal สะอาด, ทุกไม้มี SL, ไม่มีไม้นอก session • **FAIL: 5 ไม้ข้าม 23:30** (2023.11.23, 2024.02.19, 2024.06.19, 2024.11.28, 2024.12.24 — น่าจะ S6 ไม่ปิดเมื่อไม่มีแท่ง/tick ที่ 23:30 ยังไม่ยืนยันในโค้ด) • TP≠2×SL 24 ไม้ (ต้องให้ strategy-dev ยืนยัน) • ไม่ได้ปรับพารามิเตอร์ • สรุป `data/reports/SmartEA_ema_v1.summary.md`
 - **รอ Owner:** (1) ตัดสินแก้ S6 (bug logic ใน EMACrossSignal) และ spec v2 เพราะไม่มี edge ใน in-sample (short ขาดทุนหนัก) (2) ตรวจ visual 10 ไม้ (3) T-009 depends T-008 จึงยังไม่ทำ
 
+- **T-011 (2026-10-12):** แก้ S6 — `CheckTimeExit` (SmartEA.mq5) ปิด position เมื่อเวลา >= InpTimeExitHHMM **หรือ** มี position ที่เปิดก่อน 00:00 server ของวันนี้ (`HeldFromBeforeToday`) • compile 0/0 • risk-guardian PASS • qa-reviewer no BLOCKER • commit 285cbf3 • qa MINOR ค้าง: ไม่ตรวจ return CloseAll ที่ call site, last_try ใช้ TimeCurrent คนละ clock, loop position 2 รอบ, spec S6 ควรเติม "หรือถือข้ามวัน"
+
 ## Blockers / Open questions
+- ✅ RiskSelfTest หลัง T-010 บน IC demo: pass=70 fail=0 (2026-10-12)
+- ✅ S9 = (b) holiday file `data/files/holidays.csv` (2023–2026) + กฎอัปเดตทุกปี (CLAUDE.md) → T-017 implement, T-018 ปี 2027 ภายใน 15 ธ.ค.
 - ℹ️ Tester ini ต้องเขียน `Leverage=1:500` (รูปแบบ `Leverage=500` ถูกเพิกเฉย → core_smoke รันที่ 1:100) — แก้ ini ทุกไฟล์แล้ว 2026-10-12; ไม่กระทบผล G1.2 เพราะ 0 ไม้
 - ℹ️ Model=1 ใช้ได้เฉพาะ smoke; gate Phase 3+ ต้อง real ticks (Model=4)
 - ⚠️ IC demo balance = **500 USD** (จาก RiskSelfTest ชุด B) → ที่ risk 1% ทองเปิดไม้ไม่ได้ถ้า SL ≥ ~$5 (lot < 0.01) → T-006 ให้ Owner ตั้งเป็น 10,000 ก่อน Phase 5
