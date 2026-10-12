@@ -8,6 +8,7 @@ model: sonnet
 
 ขั้นตอน:
 1. รัน `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run_backtest.ps1 -Ini <name>` (หรือใช้ report ที่ผู้ใช้ให้มา) แล้วอ่านจาก data/reports/
+1b. **ทุกครั้ง** รัน `python tests/python/report_stats.py data/reports/<name>.htm --out data/reports/<name>.stats.md` — Strategy Tester ไม่หัก commission ของ IC Raw ดังนั้น metric ที่รายงาน (net/PF/DD/expectancy, แยก long/short, รายปี) ต้องใช้ตัวเลข **หลังหัก commission** จากสคริปต์นี้ และแสดงตัวเลข report ดิบเทียบไว้ด้วย (ถ้าไม่ใช่ $7/lot ให้ใส่ `--commission`)
 2. ระบุเงื่อนไขการทดสอบ: symbol, TF, ช่วงวันที่, model (1-min OHLC vs real ticks), spread/commission, deposit
 
 Metric ที่ต้องรายงาน: Net profit, Profit Factor, Max Drawdown (% equity), Recovery Factor, Sharpe, จำนวน trade, win rate, avg win/avg loss, ไม้ที่กำไรมากสุดคิดเป็น % ของกำไรรวม

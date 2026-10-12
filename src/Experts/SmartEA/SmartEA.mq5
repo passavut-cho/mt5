@@ -129,6 +129,52 @@ void OnDeinit(const int reason)
    g_log.Info(StringFormat("deinit reason=%d", reason));
   }
 
+//+------------------------------------------------------------------+
+//| OnTester: net profit หลังหัก commission (เกณฑ์ optimize Phase 4) |
+//| Tester ของ IC Raw ไม่หัก commission (DEAL_COMMISSION = 0 ทั้ง run)|
+//| → ถ้าทั้ง run ไม่มี commission บันทึกเลย จึงหัก                   |
+//|   InpCommissionPerLot x volume ต่อไม้ขาออก (ตัดสินระดับ run กันหักซ้ำ)|
+//+------------------------------------------------------------------+
+double OnTester()
+  {
+   if(!HistorySelect(0, TimeCurrent() + 1))
+     {
+      g_log.Error(StringFormat("OnTester: HistorySelect ล้มเหลว err=%d", GetLastError()));
+      return -1.0e9;   // ค่าลบมาก = pass นี้ถูกคัดทิ้งตอน optimize
+     }
+   double net = 0.0, recorded_comm = 0.0, out_volume = 0.0;
+   int    out_deals = 0;
+   const int total = HistoryDealsTotal();
+   for(int i = 0; i < total; i++)
+     {
+      const ulong ticket = HistoryDealGetTicket(i);
+      if(ticket == 0)
+         continue;
+      if(HistoryDealGetString(ticket, DEAL_SYMBOL) != _Symbol ||
+         (ulong)HistoryDealGetInteger(ticket, DEAL_MAGIC) != InpMagic)
+         continue;
+      const long type = HistoryDealGetInteger(ticket, DEAL_TYPE);
+      if(type != DEAL_TYPE_BUY && type != DEAL_TYPE_SELL)
+         continue;
+      const double comm = HistoryDealGetDouble(ticket, DEAL_COMMISSION) + HistoryDealGetDouble(ticket, DEAL_FEE);
+      recorded_comm += MathAbs(comm);
+      net += HistoryDealGetDouble(ticket, DEAL_PROFIT) + HistoryDealGetDouble(ticket, DEAL_SWAP) + comm;
+      const long entry = HistoryDealGetInteger(ticket, DEAL_ENTRY);
+      if(entry == DEAL_ENTRY_OUT || entry == DEAL_ENTRY_INOUT || entry == DEAL_ENTRY_OUT_BY)
+        {
+         out_volume += HistoryDealGetDouble(ticket, DEAL_VOLUME);
+         out_deals++;
+        }
+     }
+   double extra_comm = 0.0;
+   if(recorded_comm == 0.0)
+      extra_comm = InpCommissionPerLot * out_volume;
+   net -= extra_comm;
+   g_log.Info(StringFormat("OnTester: net=%.2f (หัก commission เพิ่ม %.2f จาก %d ไม้ %.2f lot)",
+                           net, extra_comm, out_deals, out_volume));
+   return net;
+  }
+
 void OpenWithRetry(const SSignalIntent &intent);
 
 //+------------------------------------------------------------------+
