@@ -56,6 +56,8 @@
 
 - **T-014 (2026-10-12): DONE** — ema_v1 in-sample ซ้ำ (พารามิเตอร์เดิม): 426 ไม้, เกณฑ์ spec ข้อ 9 ครบ (ยกเว้น visual) • 0 ไม้ข้าม 23:30 (5 วันเดิมถูก holiday filter ข้าม, journal โหลด holidays 54 วัน, SKIP 15 ครั้ง) • ไม่มีไม้นอก session/วันหยุด • ทุกไม้มี SL • risk/ไม้ สูงสุด 1.000% • daily loss สูงสุด 2.89% • OnTester net −3,777.38 ตรง report_stats.py • ข้อมูลให้ Owner (ไม่ใช่เกณฑ์ P2): net หลังหัก comm −3,777.38, PF 0.82, balance DD 42.3%; long PF 1.09 / short PF 0.62 • สรุป `data/reports/SmartEA_ema_v1.summary.md` (gitignored) • **รอ Owner: T-016 visual 10 ไม้ แล้ว /gate; ผลขาดทุนต้องพิจารณาก่อน Phase 3**
 
+- **T-009 (2026-10-12): BLOCKED** — risktest Q1 2024 (DailyLoss 0.5%) → 0 ไม้: signal 56 ครั้ง, D4 ปฏิเสธ 55 ครั้ง เพราะ risk/ไม้ 1% (~97 USD) > งบรายวัน 0.5% (50 USD) • (2) D4 reject ยืนยันแล้ว, (1)(3)(4) ตรวจไม่ได้เพราะไม่มีไม้ • journal สะอาด • ข้อเสนอ T-019: InpRiskPct=0.25 คู่ DailyLoss 0.5 (รอ Owner) • สรุป `data/reports/SmartEA_ema_v1_risktest.summary.md`
+
 ## Blockers / Open questions
 - ✅ RiskSelfTest หลัง T-010 บน IC demo: pass=70 fail=0 (2026-10-12)
 - ✅ S9 = (b) holiday file `data/files/holidays.csv` (2023–2026) + กฎอัปเดตทุกปี (CLAUDE.md) → T-017 implement, T-018 ปี 2027 ภายใน 15 ธ.ค.

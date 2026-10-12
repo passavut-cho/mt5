@@ -68,7 +68,7 @@ depends: T-007
 goal: รัน scripts/run_backtest.ps1 -Ini ema_v1 ได้ report ใน data/reports/; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1.summary.md ตาม spec ข้อ 9 (จำนวนไม้ ≥ 100?, ไม่มีไม้นอก session, ไม่มีไม้ข้าม 23:30, ทุกไม้มี SL) พร้อม metric ครบ; ห้ามปรับพารามิเตอร์เพื่อให้ผลดีขึ้น — ถ้าไม่ผ่านเกณฑ์ให้ BLOCKED แล้วรายงาน
 
 ## T-009 · P2 · Integration test: risk ทำงานจริงเมื่อมีไม้
-status: READY
+status: BLOCKED InpRiskPct 1% > งบ daily loss 0.5% → D4 ปฏิเสธทุกไม้ (0 trades) ตรวจข้อ 1,3,4 ไม่ได้ (ดู data/reports/SmartEA_ema_v1_risktest.summary.md)
 needs: mt5-closed
 depends: T-014
 goal: สร้าง tests/setfiles/ema_v1_risktest.set (เหมือน ema_v1.set แต่ InpDailyLossPct=0.5 เพื่อบังคับให้ breaker ทำงานบ่อย — ค่านี้ต่ำกว่าเพดาน 3% จึงไม่ฝ่ากฎ) + tests/tester-ini/ema_v1_risktest.ini (ช่วง 2024.01.01-2024.03.31) แล้วรัน backtest; transcript ต้องแสดงจาก journal: (1) ตัวอย่างบรรทัด CalcLot ที่ lot = floor(risk/(loss_per_lot+7)) ถูกต้อง 3 ไม้ (คำนวณมือเทียบ) (2) บรรทัด daily loss breaker / D4 pre-trade ปฏิเสธไม้อย่างน้อย 1 ครั้ง (3) ไม่มีวันไหนที่ขาดทุนเกิน 0.5% + 1 ไม้ (4) ทุก deal มี SL; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1_risktest.summary.md
@@ -128,3 +128,9 @@ status: WAIT_OWNER
 needs: owner
 depends: —
 goal: ภายใน 2026-12-15: Cowork ดึง CME holiday calendar 2027 (COMEX metals) + ตรวจกับประกาศ IC → เพิ่มแถว 2027 + covered_years ใน data/files/holidays.csv → Owner รับทราบ → Code commit `data: holidays 2027` (สร้าง T ใหม่ของปีถัดไปทุกครั้งที่ปิดงานนี้)
+
+## T-019 · P2 · แก้ design T-009: ลด InpRiskPct ใน risktest.set
+status: WAIT_OWNER
+needs: owner
+depends: —
+goal: Owner/Cowork อนุมัติให้ ema_v1_risktest.set ใช้ InpRiskPct=0.25 คู่ InpDailyLossPct=0.5 (ทั้งคู่ต่ำกว่าเพดาน 1%/3%) แล้วรัน T-009 ซ้ำ
