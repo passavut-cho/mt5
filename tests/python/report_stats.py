@@ -88,7 +88,24 @@ def row(name, s):
             f"{s['mdd']:,.2f} ({s['mdd_pct']:.1f}%) | {s['comm']:,.2f} |")
 
 
-def build_md(path, trades, deposit, comm_per_lot):
+def apply_stress(trades, extra_points, contract_size, point):
+    """สร้างชุดไม้ stress: หักต้นทุนเพิ่ม extra_points x contract_size x point x volume ต่อไม้ (round turn)"""
+    out = []
+    for t in trades:
+        extra = extra_points * contract_size * point * t["vol"]
+        out.append(dict(t, net=t["net"] - extra, comm=t["comm"] - extra))
+    return out
+
+
+def build_stress_md(trades, stress, deposit, extra_points):
+    head = "| ชุด | ไม้ | Net | PF | Win% | Expectancy/ไม้ | Max DD (balance) | ต้นทุนรวม (comm+extra) |\n|---|---|---|---|---|---|---|---|"
+    extra = sum(a["net"] - b["net"] for a, b in zip(trades, stress))
+    return ["", f"## Cost stress (+{extra_points:g} points ต่อ round turn)", head,
+            row("base", stats(trades, deposit)), row(f"stress +{extra_points:g}", stats(stress, deposit)),
+            "", f"- ต้นทุนเพิ่มรวม: {extra:,.2f} จาก {sum(t['vol'] for t in trades):.2f} lot"]
+
+
+def build_md(path, trades, deposit, comm_per_lot, extra_points=0.0, contract_size=100.0, point=0.01):
     head = "| กลุ่ม | ไม้ | Net หลังหัก comm | PF | Win% | Expectancy/ไม้ | Max DD (balance) | Commission |\n|---|---|---|---|---|---|---|---|"
     s = stats(trades, deposit)
     out = [f"# Stats หลังหัก commission — {path}", "",
@@ -107,6 +124,8 @@ def build_md(path, trades, deposit, comm_per_lot):
         by_year[t["close"][:4]].append(t)
     for y in sorted(by_year):
         out.append(row(y, stats(by_year[y], deposit)))
+    if extra_points:
+        out += build_stress_md(trades, apply_stress(trades, extra_points, contract_size, point), deposit, extra_points)
     return "\n".join(out) + "\n"
 
 
@@ -115,12 +134,15 @@ def main():
     ap.add_argument("report")
     ap.add_argument("--commission", type=float, default=7.0, help="InpCommissionPerLot (round turn)")
     ap.add_argument("--deposit", type=float, default=10000.0)
+    ap.add_argument("--extra-cost-points", type=float, default=0.0, help="cost stress: points เพิ่มต่อ round turn (ทอง 20 = $20/lot)")
+    ap.add_argument("--contract-size", type=float, default=100.0, help="SYMBOL_TRADE_CONTRACT_SIZE (XAUUSD = 100)")
+    ap.add_argument("--point", type=float, default=0.01, help="SYMBOL_POINT (XAUUSD = 0.01)")
     ap.add_argument("--out", help="เขียนผลลง markdown file (ไม่ระบุ = stdout)")
     a = ap.parse_args()
     trades = pair_trades(parse_deals(read_report(a.report)), a.commission)
     if not trades:
         sys.exit("ไม่พบไม้ที่ปิดแล้วใน report")
-    md = build_md(a.report, trades, a.deposit, a.commission)
+    md = build_md(a.report, trades, a.deposit, a.commission, a.extra_cost_points, a.contract_size, a.point)
     if a.out:
         open(a.out, "w", encoding="utf-8").write(md)
     sys.stdout.reconfigure(encoding="utf-8")
