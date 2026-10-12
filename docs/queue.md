@@ -70,7 +70,7 @@ goal: รัน scripts/run_backtest.ps1 -Ini ema_v1 ได้ report ใน dat
 ## T-009 · P2 · Integration test: risk ทำงานจริงเมื่อมีไม้
 status: READY
 needs: mt5-closed
-depends: T-008
+depends: T-014
 goal: สร้าง tests/setfiles/ema_v1_risktest.set (เหมือน ema_v1.set แต่ InpDailyLossPct=0.5 เพื่อบังคับให้ breaker ทำงานบ่อย — ค่านี้ต่ำกว่าเพดาน 3% จึงไม่ฝ่ากฎ) + tests/tester-ini/ema_v1_risktest.ini (ช่วง 2024.01.01-2024.03.31) แล้วรัน backtest; transcript ต้องแสดงจาก journal: (1) ตัวอย่างบรรทัด CalcLot ที่ lot = floor(risk/(loss_per_lot+7)) ถูกต้อง 3 ไม้ (คำนวณมือเทียบ) (2) บรรทัด daily loss breaker / D4 pre-trade ปฏิเสธไม้อย่างน้อย 1 ครั้ง (3) ไม่มีวันไหนที่ขาดทุนเกิน 0.5% + 1 ไม้ (4) ทุก deal มี SL; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1_risktest.summary.md
 
 ## T-010 · P2 · ปรับการ normalize SL ให้ใช้ฟังก์ชันเดียว (minor จาก gate review P1)
@@ -78,3 +78,41 @@ status: DONE 64bbf9b (รอ Owner รัน RiskSelfTest ชุด T-010 บน
 needs: risk-edit
 depends: T-004
 goal: RiskManager.CalcLot (RiskManager.mqh:404) ใช้ NormalizeDouble(digits) แต่ TradeManager ใช้ NormPrice (ปัดตาม tick_size) → ให้ทั้งสองชั้นใช้ helper เดียวที่ปัดตาม tick_size แบบ **ห่างจาก entry ไม่ได้** (ปัด SL เข้าหา entry หรือคำนวณ lot จาก SL ที่ normalize แล้วจริง) เพื่อไม่ให้ risk เกิน 1% บน symbol ที่ tick_size ≠ point; XAUUSD ที่ IC (tick 0.01 = point) ไม่เปลี่ยนผล. เพิ่ม test ใน RiskSelfTest ด้วย tick_size สมมุติ 0.05. จบเมื่อ compile 0/0, risk-guardian PASS, push สำเร็จพร้อม hash — ทำใน session interactive (ไฟล์ risk ตั้ง ask)
+
+<!-- 2026-10-12 Cowork: ผลจาก T-008 BLOCKED — แยกเป็นงานแก้ระบบ (ไม่แตะพารามิเตอร์กลยุทธ์) -->
+
+## T-011 · P2 · แก้บั๊ก S6: position ข้ามวันไม่ถูกปิด
+status: READY
+needs: none
+depends: —
+goal: สาเหตุ (Cowork ตรวจโค้ด): `CEMACrossSignal::TimeExitDue()` (EMACrossSignal.mqh:181) เช็คแค่ `hour*100+min >= 2330` ของ "วันนี้" — วันตลาดปิดเร็ว (Thanksgiving, Juneteenth, Christmas Eve, Presidents Day) ไม่มี tick หลัง 23:30 พอ tick แรกของวันถัดไป (~01:00) ค่า 0100 < 2330 จึงไม่ปิด. แก้: time exit ต้องเป็นจริงเมื่อ (a) เวลา server >= InpTimeExitHHMM **หรือ** (b) มี position ของ EA ที่เปิดก่อน 00:00 server ของวันนี้ → ปิดทันทีที่ tick แรก. ห้ามแก้พารามิเตอร์กลยุทธ์อื่น. จบเมื่อ compile 0/0, qa-reviewer ไม่มี BLOCKER, push สำเร็จพร้อม hash
+
+## T-012 · P2 · ตรวจ 24 ไม้ที่ TP ≠ 2 × SL
+status: READY
+needs: none
+depends: —
+goal: อ่าน data/reports/SmartEA_ema_v1.htm + โค้ด แล้วอธิบายสาเหตุที่ 24/440 ไม้มี |TP − 2×SL| > 0.02 (สมมุติฐาน: SL/TP คิดจากราคาอ้างอิงตอนคำนวณ แต่ fill ต่าง หรือผลจาก T-010 ที่ปัด SL เข้าหา entry แต่ไม่ได้ปัด TP ให้สอดคล้อง). ถ้าเป็นบั๊ก → แก้ให้ TP = entry_จริง ± 2 × |entry_จริง − SL| บน tick grid (ไม่แตะ RiskManager — ถ้าต้องแตะให้ BLOCKED). บันทึกผลลง data/reports/SmartEA_ema_v1.tp-check.md. จบเมื่อ compile 0/0 (ถ้าแก้โค้ด), push สำเร็จพร้อม hash
+
+## T-013 · P2 · หัก commission ในผลวิเคราะห์ backtest
+status: READY
+needs: none
+depends: —
+goal: Strategy Tester ไม่หัก commission ของ IC Raw (คอลัมน์ Commission = 0) → สร้าง tests/python/report_stats.py ที่อ่าน report .htm ของ MT5 (UTF-16) แล้วคำนวณ net/PF/DD/expectancy **หลังหัก InpCommissionPerLot × volume ต่อไม้** + แยก long/short + รายปี, ออกเป็น markdown; และเพิ่ม `OnTester()` ใน SmartEA.mq5 คืนค่า net หลังหัก commission (ใช้เป็นเกณฑ์ optimize ใน Phase 4). ทดสอบกับ SmartEA_ema_v1.htm ต้องได้ net ≈ −3,780 (ตาม summary เดิม). backtest-analyst ต้องใช้สคริปต์นี้ทุกครั้งหลังจากนี้ (อัปเดต .claude/agents/backtest-analyst.md). จบเมื่อ compile 0/0, push สำเร็จพร้อม hash
+
+## T-014 · P2 · รัน ema_v1 in-sample ซ้ำหลังแก้ระบบ
+status: READY
+needs: mt5-closed
+depends: T-011, T-012, T-013, T-015
+goal: เหมือน T-008 ทุกข้อ (พารามิเตอร์เดิมทั้งหมด ห้ามปรับ) + ใช้ tests/python/report_stats.py รายงาน metric หลังหัก commission. เกณฑ์ spec ข้อ 9 (ตามที่ Owner อนุมัติใน S9). **PF/DD ไม่ใช่เกณฑ์ Phase 2** — รายงานเป็นข้อมูลให้ Owner เท่านั้น. ถ้าเกณฑ์ข้อ 9 ครบยกเว้นข้อ visual → DONE แล้วให้ T-016 ต่อ
+
+## T-015 · P2 · Owner ตัดสิน S9 (วันตลาดปิดเร็ว)
+status: WAIT_OWNER
+needs: owner
+depends: —
+goal: ดู docs/strategy/spec-ema-adx.md ข้อ 11 แล้วตอบ S9
+
+## T-016 · P2 · Owner ตรวจ visual 10 ไม้
+status: WAIT_OWNER
+needs: owner
+depends: T-014
+goal: Owner เปิด Strategy Tester แบบ Visual กับ ema_v1 แล้วสุ่มดู 10 ไม้ (Cowork จะเลือกวันที่ให้จาก report ของ T-014) ว่า entry/SL/TP/exit ตรง spec ข้อ 2–4
