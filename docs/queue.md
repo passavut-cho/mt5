@@ -6,7 +6,7 @@
 ## รูปแบบ task
 ```
 ## T-NNN · P<phase> · <ชื่อสั้น>
-status: READY | IN_PROGRESS | DONE <hash> | BLOCKED <เหตุผล> | WAIT_OWNER
+status: READY | IN_PROGRESS | DONE 5259387 | BLOCKED <เหตุผล> | WAIT_OWNER
 needs: none | mt5-closed | owner | risk-edit
 depends: T-xxx, T-yyy  (หรือ —)
 goal: <เงื่อนไขจบที่ตรวจได้จาก transcript>
@@ -118,7 +118,7 @@ depends: T-014
 goal: Owner เปิด Strategy Tester แบบ Visual กับ ema_v1 แล้วสุ่มดู 10 ไม้ (Cowork จะเลือกวันที่ให้จาก report ของ T-014) ว่า entry/SL/TP/exit ตรง spec ข้อ 2–4
 
 ## T-017 · P2 · Holiday filter (spec S9)
-status: DONE <hash>
+status: DONE 5259387
 needs: none
 depends: T-011
 goal: implement ตาม spec ข้อ 11 "S9 — Owner อนุมัติ": อ่าน MQL5\Files\SmartEA\holidays.csv (ข้ามบรรทัด #, parse `# covered_years:`), `#property tester_file "SmartEA\\holidays.csv"`, input InpUseHolidayFilter/InpHolidayFile, ไม่เปิดไม้ใหม่ในวันที่อยู่ในไฟล์, fail closed เมื่อปีไม่อยู่ใน covered_years หรืออ่านไฟล์ไม่ได้ (Warn วันละครั้ง). ใส่ logic ใน Signals/ หรือ Expert — ห้ามแตะ RiskManager/Config. log ทุกครั้งที่ข้ามสัญญาณเพราะวันหยุด. จบเมื่อ compile 0/0, qa-reviewer ไม่มี BLOCKER, risk-guardian PASS, push สำเร็จพร้อม hash
