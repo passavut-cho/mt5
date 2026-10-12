@@ -141,11 +141,11 @@ public:
 - **D4 = (b)** pre-trade check: `CanOpen`/`CalcLot` ปฏิเสธไม้ถ้า `equity − (loss_per_lot + commission) × lot ≤ day_start_balance × (1 − 3%)` — ทำให้ 3% เป็นเพดานจริง (ยกเว้น gap/slippage)
 - **D5 = (b)** ทุก retry: refresh ราคา → คำนวณ SL + lot ใหม่ผ่าน RiskManager; slippage จำกัดด้วย `InpDeviationPoints`; หลัง fill log `actual_risk = −OrderCalcProfit(fill_price, sl) × volume + commission × volume` และ % ของ equity
 - **D6 = (b)** บัญชี netting: ถ้ามี position ของ symbol นี้อยู่แล้ว (ทุก magic) → ไม่เปิด (fail closed) + `Warn` ใน OnInit ว่าเป็น netting; บัญชีหลักสำหรับทดสอบ = hedging
-- **D7 = (b)** `InpMaxSpreadPoints = 20` ใน `.set` ของ XAUUSD ทุกไฟล์ (รวม smoke) — default ในโค้ดคง 0 (ค่าต่อ symbol)
+- **D7 = (b)** `InpMaxSpreadPoints = 20` ใน `.set` ของ XAUUSD ทุกไฟล์ (รวม smoke) — **แก้ไข 2026-10-12 (Owner อนุมัติ): default ในโค้ด = 20 (ค่าของ XAUUSD) symbol อื่นต้องตั้งใน .set**
 - Technical: `CanOpen` ปฏิเสธเมื่อ `TERMINAL_CONNECTED == 0` (นอก tester)
 
 ### D7 — ค่าที่อนุมัติ: `InpMaxSpreadPoints = 20` สำหรับ XAUUSD (Owner อนุมัติ 2026-10-12)
 ข้อมูล IC XAUUSD 7 วัน: median 6 • p95 11 • max 40 points (1 point = $0.01)
 - สูตร p95 × 1.5 = 16.5 → **เสนอปัดเป็น 20 points ($0.20)** เพราะ spread ในแท่ง M1 มักต่ำกว่า spread จริงตอน EA ส่ง order (EA ทำงานตอนเปิดแท่งใหม่ ซึ่งมักชนช่วงข่าว/rollover)
 - 20 ยังกันช่วง rollover/เปิดตลาด (40–50 points) ได้ และคิดเป็นแค่ ~4% ของ risk ต่อไม้ที่ SL $5 (0.19 lot × $20)
-- ใช้ใน `.set` ของ XAUUSD ทุกตัว — ค่า default ในโค้ด (0) ไม่แตะ เพราะเป็นค่าต่อ symbol
+- ใช้ใน `.set` ของ XAUUSD ทุกตัว — ค่า default ในโค้ดเปลี่ยนจาก 0 เป็น 20 (แก้ไข 2026-10-12) เพื่อไม่ให้ EA เปล่าไม่มี spread cap; symbol อื่นต้องตั้งค่าเองใน .set

@@ -25,7 +25,7 @@ input double         InpRiskPct           = 1.0;       // % equity เสี่�
 input double         InpDailyLossPct      = 3.0;       // % ขาดทุนรายวันทั้งบัญชี (เพดาน 3.0)
 input int            InpMaxPositions      = 1;         // จำนวน position สูงสุดต่อ magic+symbol
 input double         InpCommissionPerLot  = 7.0;       // commission round turn ต่อ lot (สกุลเงินบัญชี) IC Raw
-input int            InpMaxSpreadPoints   = 0;         // spread สูงสุด (points) 0 = ไม่จำกัด
+input int            InpMaxSpreadPoints   = 20;        // spread สูงสุด (points) 0 = ไม่จำกัด • default 20 = XAUUSD (ADR 0002 D7) symbol อื่นตั้งใน .set
 input uint           InpDeviationPoints   = 20;        // slippage ที่ยอมรับ (points)
 input ENUM_LOG_LEVEL InpLogLevel          = LOG_INFO;  // ระดับ log (DEBUG ถูกปิดอัตโนมัติใน tester)
 
