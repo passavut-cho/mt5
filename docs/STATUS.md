@@ -78,3 +78,5 @@
 
 ## Pre-registered thresholds (Phase 5)
 _กำหนดก่อนเริ่ม Phase 5 ห้ามแก้ระหว่างทาง_
+
+- **T-019 (2026-10-12): DONE** — สี EMA ใน visual tester: `src/Indicators/SmartEA_EMAPair.mq5` (fast น้ำเงิน / slow ส้ม), `TesterHideIndicators` + iCustom handle (display only) ใน CEMACrossSignal, `tester_indicator` ใน SmartEA.mq5 • compile 0/0 ทั้ง 4 ไฟล์ • risk-guardian PASS • qa-reviewer no BLOCKER • ema_v1 ซ้ำ: 426 ไม้ net −3,777.38 เท่าเดิม • commit ea8e5da • **รอ Owner ยืนยันใน visual run ว่าเห็น 2 เส้นคนละสี** (ถ้าไม่เห็น อาจต้อง ChartIndicatorAdd) • MINOR: EMA seed ต่างจาก iMA ช่วงแท่งแรกๆ, ต้อง compile indicator ก่อน backtest ใน clone ใหม่
