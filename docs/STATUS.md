@@ -60,6 +60,8 @@
 
 - **T-009 รอบ 2 (2026-10-12): BLOCKED** — risktest (Risk 0.5/DailyLoss 1.5, Q1 2024, Model=1): 55 ไม้, net หลังหัก comm +199.43, PF 1.15 • (1) lot ตรงสูตรมือ 55/55, actual_risk ≤0.497% ✅ (3) ไม่มีวันเกิน 1.5% (สูงสุด 03-19 −1.466%) ✅ (4) ทุกไม้มี SL, journal สะอาด ✅ • **(2) ไม่มี D4 reject/breaker** (headroom ต่ำสุด +5.51) → reject path ยังไม่พิสูจน์ใน tester • CalcLot log เป็น DEBUG ไม่ขึ้นใน tester (ใช้ TRADE OPEN/RISK แทน) • รอ Owner: เลือกค่า test ที่บังคับ reject (DailyLoss ~0.75–1.0 คู่ Risk 0.5) แทน T-019 • สรุป `data/reports/SmartEA_ema_v1_risktest.summary.md`
 
+- **T-009 รอบ 3 (2026-10-12): DONE** — risktest ทั้งปี 2024 (Risk 0.5 / DailyLoss 1.0, Model=1): 206 ไม้, lot ตรงสูตรมือ (3 ไม้ตัวอย่าง), actual_risk 0.48–0.50% • D4 pre-trade reject 6 ครั้ง (เช่น 2024.03.19 16:45 ขาดทุนสะสม 0.955% ก่อน reject) • ไม่มีวันขาดทุน realized ถึง 1.0% (สูงสุด 09.16 −0.992% หลังหัก comm, headroom ~$0.8) • 0/206 sl=0, journal สะอาด • net หลังหัก comm −800.96, PF 0.86 (ใช้ยืนยัน risk เท่านั้น) • สรุป `data/reports/SmartEA_ema_v1_risktest.summary.md`
+
 ## Blockers / Open questions
 - ✅ RiskSelfTest หลัง T-010 บน IC demo: pass=70 fail=0 (2026-10-12)
 - ✅ S9 = (b) holiday file `data/files/holidays.csv` (2023–2026) + กฎอัปเดตทุกปี (CLAUDE.md) → T-017 implement, T-018 ปี 2027 ภายใน 15 ธ.ค.
