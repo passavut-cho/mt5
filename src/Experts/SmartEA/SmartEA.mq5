@@ -1,11 +1,11 @@
 ﻿//+------------------------------------------------------------------+
 //|                                                     SmartEA.mq5  |
-//|  Phase 1 — Core framework: Signals -> Risk -> Execution          |
-//|  Signal ตอนนี้เป็น CSignalNone (ไม่เทรด) ไว้ smoke test           |
+//|  Core framework: Signals -> Risk -> Execution                    |
+//|  Phase 2 — Signal = EMA cross + ADX filter (spec-ema-adx v1)     |
 //+------------------------------------------------------------------+
 #property copyright "Phas"
 #property version   "1.00"   // รูปแบบ x.yy; ใช้ git tag บอก phase แทน
-#property description "SmartEA framework — Phase 1 core (CSignalNone: no signals)"
+#property description "SmartEA — EMA 9/21 cross + ADX filter (spec v1)"
 
 #include <SmartEA/Core/Types.mqh>
 #include <SmartEA/Core/Logger.mqh>
@@ -13,7 +13,7 @@
 #include <SmartEA/Core/SignalBase.mqh>
 #include <SmartEA/Core/RiskManager.mqh>
 #include <SmartEA/Core/TradeManager.mqh>
-#include <SmartEA/Signals/SignalNone.mqh>
+#include <SmartEA/Signals/EMACrossSignal.mqh>
 
 //--- inputs
 input bool           InpAllowLive         = false;     // อนุญาตบัญชีจริง — ผู้ใช้เท่านั้นที่เปิดได้
@@ -26,11 +26,25 @@ input int            InpMaxSpreadPoints   = 0;         // spread สูงสุ
 input uint           InpDeviationPoints   = 20;        // slippage ที่ยอมรับ (points)
 input ENUM_LOG_LEVEL InpLogLevel          = LOG_INFO;  // ระดับ log (DEBUG ถูกปิดอัตโนมัติใน tester)
 
+//--- Strategy: EMA cross + ADX (docs/strategy/spec-ema-adx.md)
+input int            InpFastEMA           = 9;         // EMA เร็ว
+input int            InpSlowEMA           = 21;        // EMA ช้า
+input int            InpADXPeriod         = 14;        // ADX period
+input double         InpADXMin            = 25.0;      // ADX ขั้นต่ำ (S2)
+input int            InpATRPeriod         = 14;        // ATR period สำหรับ SL
+input double         InpSLATRMult         = 1.5;       // SL = ATR x ค่านี้ (S4)
+input double         InpTPRMult           = 2.0;       // TP = SL x ค่านี้ (S5)
+input int            InpSessionStartHour  = 10;        // เปิดไม้ได้ตั้งแต่ชั่วโมงนี้ (server time) (S1)
+input int            InpSessionEndHour    = 23;        // ... ก่อนชั่วโมงนี้ (hour < end)
+input int            InpTimeExitHHMM      = 2330;      // ปิดทุก position เมื่อ server time >= HHMM (S6)
+input int            InpFridayCutoffHour  = 20;        // ศุกร์ไม่เปิดไม้ใหม่ตั้งแต่ชั่วโมงนี้ (S7)
+
 CLogger        g_log;
 CBarClock      g_clock;
 CRiskManager   g_risk;
 CTradeManager  g_trade;
 CSignalBase   *g_signal = NULL;
+CEMACrossSignal *g_ema  = NULL;     // ตัวเดียวกับ g_signal (ไว้เรียก RawCross / TimeExitDue)
 
 //+------------------------------------------------------------------+
 //| Live guard (กฎเหล็กข้อ 1)                                          |
@@ -75,15 +89,25 @@ int OnInit()
    if(!g_trade.Init(_Symbol, InpMagic, &g_log, InpDeviationPoints))
       return(INIT_FAILED);
 
-   g_signal = new CSignalNone();
-   if(g_signal == NULL || !g_signal.Init(_Symbol, _Period, &g_log))
+   g_ema = new CEMACrossSignal();
+   if(g_ema == NULL)
+      return(INIT_FAILED);
+   g_signal = g_ema;
+   if(!g_ema.Configure(InpFastEMA, InpSlowEMA, InpADXPeriod, InpADXMin, InpATRPeriod, InpSLATRMult, InpTPRMult,
+                       InpSessionStartHour, InpSessionEndHour, InpTimeExitHHMM, InpFridayCutoffHour))
+     {
+      g_log.Error("strategy input ไม่ถูกต้อง");
+      delete g_ema;
+      g_ema = NULL;
+      g_signal = NULL;
+      return(INIT_PARAMETERS_INCORRECT);
+     }
+   if(!g_signal.Init(_Symbol, _Period, &g_log))
      {
       g_log.Error("signal init ล้มเหลว");
-      if(g_signal != NULL)
-        {
-         delete g_signal;
-         g_signal = NULL;
-        }
+      delete g_ema;
+      g_ema = NULL;
+      g_signal = NULL;
       return(INIT_FAILED);
      }
 
@@ -100,6 +124,7 @@ void OnDeinit(const int reason)
       g_signal.Deinit();      // Signal ที่มี indicator ต้อง IndicatorRelease ใน Deinit
       delete g_signal;
       g_signal = NULL;
+      g_ema = NULL;
      }
    g_log.Info(StringFormat("deinit reason=%d", reason));
   }
@@ -107,19 +132,49 @@ void OnDeinit(const int reason)
 void OpenWithRetry(const SSignalIntent &intent);
 
 //+------------------------------------------------------------------+
-//| Flow ต่อแท่งใหม่: Risk.CanOpen -> Signal -> Risk.CalcLot -> Trade  |
+//| ทิศของ position ที่ EA นี้ถืออยู่ (magic+symbol) — NONE = ไม่มี      |
+//+------------------------------------------------------------------+
+ENUM_SIGNAL_DIR HeldDirection()
+  {
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+     {
+      if(PositionGetSymbol(i) != _Symbol)
+         continue;
+      if((ulong)PositionGetInteger(POSITION_MAGIC) != InpMagic)
+         continue;
+      return(PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY ? SIGNAL_BUY : SIGNAL_SELL);
+     }
+   return(SIGNAL_NONE);
+  }
+
+//+------------------------------------------------------------------+
+//| S6: ปิดทุก position เมื่อถึงเวลา (ตรวจทุก tick เพราะมีเวลาตายตัว)    |
+//| ถ้าปิดไม่สำเร็จ ลองใหม่ได้ไม่เกินทุก 5 วินาที กัน log ท่วม            |
+//+------------------------------------------------------------------+
+void CheckTimeExit()
+  {
+   static datetime last_try = 0;
+   if(!g_ema.TimeExitDue() || HeldDirection() == SIGNAL_NONE)
+      return;
+   const datetime now = TimeCurrent();
+   if(now - last_try < 5)
+      return;
+   last_try = now;
+   g_trade.CloseAll(StringFormat("time exit %04d (S6)", InpTimeExitHHMM));
+  }
+
+//+------------------------------------------------------------------+
+//| Flow ต่อแท่งใหม่: Signal -> (exit S3) -> Risk.CanOpen -> CalcLot -> Trade |
 //+------------------------------------------------------------------+
 void OnTick()
   {
+   CheckTimeExit();
+
    if(!g_clock.IsNewBar())
       return;
 
    string why;
-   if(!g_risk.CanOpen(why))
-     {
-      g_log.Debug("SKIP: " + why);   // DEBUG กัน journal บวมตอน position เปิดอยู่/breaker ทำงาน
-      return;
-     }
+   bool can_open = g_risk.CanOpen(why);   // เรียกทุกแท่งเพื่อให้ breaker / day rollover ทำงานและ log ตามปกติ
 
    SSignalIntent intent;
    intent.Reset();
@@ -128,8 +183,24 @@ void OnTick()
       g_log.Warn("signal ข้อมูลไม่พร้อม");
       return;
      }
+
+   //--- S3: cross ฝั่งตรงข้ามกับ position ที่ถืออยู่ -> ปิด แล้วค่อยพิจารณาเข้าฝั่งใหม่ (ผ่าน filter + risk ปกติ)
+   const ENUM_SIGNAL_DIR held = HeldDirection();
+   if(held != SIGNAL_NONE && g_ema.RawCross() == (ENUM_SIGNAL_DIR)(-(int)held))
+     {
+      if(!g_trade.CloseAll("opposite cross (S3)"))
+         return;                            // ปิดไม่สำเร็จ -> ไม่เปิดไม้ใหม่ (รอบหน้าลองใหม่)
+      can_open = g_risk.CanOpen(why);
+     }
+
    if(intent.dir == SIGNAL_NONE)
       return;
+
+   if(!can_open)
+     {
+      g_log.Debug("SKIP: " + why);   // DEBUG กัน journal บวมตอน position เปิดอยู่/breaker ทำงาน
+      return;
+     }
 
    OpenWithRetry(intent);
   }
