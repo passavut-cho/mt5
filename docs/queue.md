@@ -178,7 +178,7 @@ depends: T-023
 goal: implement ตาม docs/strategy/spec-ema-adx-v2.md ทุก flag (V2a HTF ใช้แท่ง H4 ที่ปิดแล้ว, V2b news filter + tester_file + fail closed, V2c no-reverse + re-entry bars, V2d opposite exit switch) ห้ามแตะ RiskManager/Config • สร้าง tests/setfiles/ema_v2a.set, ema_v2b.set, ema_v2c.set, ema_v2d.set (เปิดทีละ flag) • **Regression:** flags default + ema_v1.ini (Model=1) ต้องได้ 426 ไม้ net −3,777.38 เท่า T-014 • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER, push พร้อม hash
 
 ## T-025 · P3 · Experiments E2–E5 (in-sample, Model=1 + cost stress)
-status: READY
+status: IN_PROGRESS
 needs: mt5-closed
 depends: T-024, T-026, T-027
 goal: [แก้ 2026-10-12 ตาม T-026] รัน ema_v2a/b/c/d.set แต่ละตัวบน in-sample 2023–2024 **Model=1** (ini แบบ ema_v1.ini) และรายงาน 2 ชุด: base และ **stress +20 points ต่อ round turn** (report_stats.py --extra-cost-points 20) • report_stats.py หัก commission • เติมแถว E2–E5 ใน docs/strategy/experiments.md (trades, PF, net, MaxDD, ผลเทียบ E1 ตาม hypothesis) • **ห้ามแตะ 2025/2026, ห้ามปรับพารามิเตอร์, ห้ามสร้าง variant เพิ่ม** • จบเมื่อ push สำเร็จพร้อม hash (E6 = Owner/Cowork ตัดสินว่ารวม flag ไหน)
