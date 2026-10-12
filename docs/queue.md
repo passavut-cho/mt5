@@ -190,7 +190,7 @@ depends: —
 goal: ดู docs/strategy/spec-ema-adx-v2.md หัวข้อ "Data limitation (T-021)" แล้วตอบ R1–R3
 
 ## T-027 · P3 · report_stats.py: เพิ่ม cost stress
-status: READY
+status: DONE 0b3c6c7 (stress 20 บน ema_v1: base −3,777.38 / stress −5,714.38, extra 1,937.00 จาก 96.85 lot)
 needs: none
 depends: —
 goal: เพิ่ม option `--extra-cost-points N` ใน tests/python/report_stats.py: หักต้นทุนเพิ่ม N points × contract_size(100) × point(0.01) × volume ต่อไม้ (ทอง: 20 points = $20/lot round turn) แสดงคู่กับผล base ในตารางเดียว (net, PF, DD, expectancy) • ทดสอบกับ SmartEA_ema_v1.htm: base ต้องได้ net −3,777.38 เท่าเดิม และ stress 20 ต้องหักเพิ่มเท่ากับ 20 × volume รวม (96.85 lot → −1,937.00) • อัปเดต .claude/agents/backtest-analyst.md ให้รายงาน stress ทุกครั้งตั้งแต่ Phase 3 • push พร้อม hash
