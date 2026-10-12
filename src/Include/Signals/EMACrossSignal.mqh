@@ -33,12 +33,17 @@ private:
    int             m_h_slow;
    int             m_h_adx;
    int             m_h_atr;
+   int             m_h_htf;                // iMA EMA(HTF) สำหรับ V2a (INVALID_HANDLE เมื่อปิด flag)
+   bool            m_use_htf;              // V2a: กรองทิศด้วยแท่ง HTF ที่ปิดแล้ว
+   ENUM_TIMEFRAMES m_htf_tf;
+   int             m_htf_ema;
    int             m_h_view;               // iCustom แสดงสี EMA ใน visual mode — display only
 
    ENUM_SIGNAL_DIR m_raw_cross;            // cross ล่าสุดที่ Evaluate เจอ (ก่อนผ่าน filter) ใช้เป็น exit S3
 
    bool            Read(const int handle, const int buf, const int count, double &out[]) const;
    bool            InSession(string &why) const;
+   bool            HtfAllows(const ENUM_SIGNAL_DIR dir, string &why) const;
 
 public:
                    CEMACrossSignal();
@@ -48,6 +53,9 @@ public:
                              const int atr_period, const double sl_atr_mult, const double tp_r_mult,
                              const int session_start_hour, const int session_end_hour,
                              const int time_exit_hhmm, const int friday_cutoff_hour);
+
+   //--- V2a (เรียกก่อน Init; ไม่เรียก = ปิด flag = พฤติกรรม v1)
+   bool            ConfigureHTF(const bool use_htf, const ENUM_TIMEFRAMES htf_tf, const int htf_ema);
 
    virtual bool    Init(const string symbol, const ENUM_TIMEFRAMES tf, CLogger *log);
    virtual void    Deinit();
@@ -67,8 +75,20 @@ CEMACrossSignal::CEMACrossSignal()
      m_sl_atr_mult(0), m_tp_r_mult(0), m_session_start_hour(0), m_session_end_hour(0),
      m_time_exit_hhmm(0), m_friday_cutoff_hour(0), m_configured(false),
      m_h_fast(INVALID_HANDLE), m_h_slow(INVALID_HANDLE), m_h_adx(INVALID_HANDLE), m_h_atr(INVALID_HANDLE),
+     m_h_htf(INVALID_HANDLE), m_use_htf(false), m_htf_tf(PERIOD_H4), m_htf_ema(50),
      m_h_view(INVALID_HANDLE), m_raw_cross(SIGNAL_NONE)
   {
+  }
+
+//+------------------------------------------------------------------+
+bool CEMACrossSignal::ConfigureHTF(const bool use_htf, const ENUM_TIMEFRAMES htf_tf, const int htf_ema)
+  {
+   if(use_htf && (htf_ema < 1 || htf_tf == PERIOD_CURRENT))
+      return(false);
+   m_use_htf = use_htf;
+   m_htf_tf  = htf_tf;
+   m_htf_ema = htf_ema;
+   return(true);
   }
 
 //+------------------------------------------------------------------+
@@ -136,6 +156,18 @@ bool CEMACrossSignal::Init(const string symbol, const ENUM_TIMEFRAMES tf, CLogge
       return(false);
      }
 
+   if(m_use_htf)
+     {
+      m_h_htf = iMA(symbol, m_htf_tf, m_htf_ema, 0, MODE_EMA, PRICE_CLOSE);
+      if(m_h_htf == INVALID_HANDLE)
+        {
+         m_log.Error(StringFormat("สร้าง HTF EMA handle ล้มเหลว err=%d", GetLastError()));
+         Deinit();
+         return(false);
+        }
+      m_log.Info(StringFormat("V2a HTF filter ON: %s EMA%d (แท่งที่ปิดแล้ว)", EnumToString(m_htf_tf), m_htf_ema));
+     }
+
    //--- handle นี้มีไว้ให้ tester วาดเส้นเท่านั้น ห้ามอ่านค่ามาตัดสินเทรด; ล้มเหลวไม่กระทบ signal
    if(visual)
      {
@@ -158,6 +190,7 @@ void CEMACrossSignal::Deinit()
    if(m_h_slow != INVALID_HANDLE) { IndicatorRelease(m_h_slow); m_h_slow = INVALID_HANDLE; }
    if(m_h_adx  != INVALID_HANDLE) { IndicatorRelease(m_h_adx);  m_h_adx  = INVALID_HANDLE; }
    if(m_h_atr  != INVALID_HANDLE) { IndicatorRelease(m_h_atr);  m_h_atr  = INVALID_HANDLE; }
+   if(m_h_htf  != INVALID_HANDLE) { IndicatorRelease(m_h_htf);  m_h_htf  = INVALID_HANDLE; }
    if(m_h_view != INVALID_HANDLE) { IndicatorRelease(m_h_view); m_h_view = INVALID_HANDLE; }
   }
 
@@ -191,6 +224,28 @@ bool CEMACrossSignal::InSession(string &why) const
       return(false);
      }
    return(true);
+  }
+
+//+------------------------------------------------------------------+
+//| V2a: BUY เมื่อ close(HTF)[1] > EMA(HTF)[1], SELL เมื่อ <            |
+//| ใช้แท่ง HTF ที่ปิดแล้ว (shift 1) เท่านั้น; อ่านไม่ได้ = ไม่ผ่าน (fail closed) |
+//+------------------------------------------------------------------+
+bool CEMACrossSignal::HtfAllows(const ENUM_SIGNAL_DIR dir, string &why) const
+  {
+   double ema[], cls[];
+   ArraySetAsSeries(ema, true);
+   ArraySetAsSeries(cls, true);
+   if(m_h_htf == INVALID_HANDLE || CopyBuffer(m_h_htf, 0, 1, 1, ema) != 1 ||
+      CopyClose(m_symbol, m_htf_tf, 1, 1, cls) != 1)
+     {
+      why = "HTF filter: อ่านข้อมูล HTF ไม่ได้ (fail closed)";
+      return(false);
+     }
+   const bool ok = (dir == SIGNAL_BUY) ? (cls[0] > ema[0]) : (cls[0] < ema[0]);
+   if(!ok)
+      why = StringFormat("HTF filter: close %.2f %s EMA%d %.2f", cls[0], (dir == SIGNAL_BUY ? "<=" : ">="),
+                         m_htf_ema, ema[0]);
+   return(ok);
   }
 
 //+------------------------------------------------------------------+
@@ -239,8 +294,15 @@ bool CEMACrossSignal::Evaluate(SSignalIntent &out)
       return(true);
      }
 
-   //--- S1 + S7: session
+   //--- V2a: HTF trend filter (ปิดอยู่ = ข้าม)
    string why;
+   if(m_use_htf && !HtfAllows(m_raw_cross, why))
+     {
+      m_log.Trade("SKIP", StringFormat("cross %s : %s", side, why));
+      return(true);
+     }
+
+   //--- S1 + S7: session
    if(!InSession(why))
      {
       m_log.Info(StringFormat("cross %s ไม่เข้า: %s", side, why));

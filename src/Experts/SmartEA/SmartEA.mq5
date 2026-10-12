@@ -7,6 +7,7 @@
 #property version   "1.00"   // รูปแบบ x.yy; ใช้ git tag บอก phase แทน
 #property description "SmartEA — EMA 9/21 cross + ADX filter (spec v1)"
 #property tester_file "SmartEA\\holidays.csv"   // ให้ Strategy Tester คัดลอกไฟล์วันหยุดไปด้วย (S9)
+#property tester_file "SmartEA\\news.csv"   // ข่าว NFP/CPI/FOMC สำหรับ V2b
 #property tester_indicator "SmartEA\\SmartEA_EMAPair.ex5"   // แสดงสี EMA ใน visual mode (display only)
 
 #include <SmartEA/Core/Types.mqh>
@@ -17,6 +18,7 @@
 #include <SmartEA/Core/TradeManager.mqh>
 #include <SmartEA/Signals/EMACrossSignal.mqh>
 #include <SmartEA/Signals/HolidayFilter.mqh>
+#include <SmartEA/Signals/NewsFilter.mqh>
 
 //--- inputs
 input bool           InpAllowLive         = false;     // อนุญาตบัญชีจริง — ผู้ใช้เท่านั้นที่เปิดได้
@@ -44,12 +46,25 @@ input int            InpFridayCutoffHour  = 20;        // ศุกร์ไม�
 input bool           InpUseHolidayFilter  = true;      // ไม่เปิดไม้ใหม่ในวันที่อยู่ใน holiday file (S9)
 input string         InpHolidayFile       = "SmartEA\\holidays.csv";  // path ใต้ MQL5\Files
 
+//--- Strategy v2 feature flags (docs/strategy/spec-ema-adx-v2.md) — default = พฤติกรรม v1 เป๊ะ
+input bool            InpUseHTFFilter     = false;     // V2a: BUY/SELL ตามแท่ง HTF ที่ปิดแล้วเทียบ EMA(HTF)
+input ENUM_TIMEFRAMES InpHTFTimeframe     = PERIOD_H4; // V2a: timeframe ของ HTF
+input int             InpHTFEMA           = 50;        // V2a: period EMA ของ HTF
+input bool            InpUseNewsFilter    = false;     // V2b: ไม่เปิดไม้ใหม่ช่วงข่าว (news.csv)
+input string          InpNewsFile         = "SmartEA\\news.csv";  // path ใต้ MQL5\Files
+input int             InpNewsWindowMin    = 30;        // V2b: ±นาทีรอบเวลาข่าว (server time)
+input bool            InpNoReverse        = false;     // V2c: cross สวน = ปิดอย่างเดียว ไม่กลับฝั่ง + พักเข้าไม้
+input int             InpReentryBars      = 4;         // V2c: ห้ามเปิดไม้ใหม่จนผ่านกี่แท่งหลังปิดด้วย cross สวน
+input bool            InpUseOppositeExit  = true;      // V2d: false = ไม่ปิดเมื่อ cross สวน (ปิดด้วย SL/TP/time exit)
+
 CLogger        g_log;
 CBarClock      g_clock;
 CRiskManager   g_risk;
 CTradeManager  g_trade;
 CSignalBase   *g_signal = NULL;
 CHolidayFilter g_holiday;
+CNewsFilter    g_news;
+datetime       g_noreverse_bar = 0;   // V2c: เวลาเปิดแท่งที่ปิดไม้ด้วย cross สวน (0 = ไม่มีการพัก)
 CEMACrossSignal *g_ema  = NULL;     // ตัวเดียวกับ g_signal (ไว้เรียก RawCross / TimeExitDue)
 
 //+------------------------------------------------------------------+
@@ -108,6 +123,22 @@ int OnInit()
       g_signal = NULL;
       return(INIT_PARAMETERS_INCORRECT);
      }
+   if(!g_ema.ConfigureHTF(InpUseHTFFilter, InpHTFTimeframe, InpHTFEMA))
+     {
+      g_log.Error("HTF input ไม่ถูกต้อง");
+      delete g_ema;
+      g_ema = NULL;
+      g_signal = NULL;
+      return(INIT_PARAMETERS_INCORRECT);
+     }
+   if(InpReentryBars < 0)
+     {
+      g_log.Error("InpReentryBars ต้อง >= 0");
+      delete g_ema;
+      g_ema = NULL;
+      g_signal = NULL;
+      return(INIT_PARAMETERS_INCORRECT);
+     }
    if(!g_signal.Init(_Symbol, _Period, &g_log))
      {
       g_log.Error("signal init ล้มเหลว");
@@ -126,6 +157,18 @@ int OnInit()
       return(INIT_PARAMETERS_INCORRECT);
      }
 
+   if(!g_news.Init(&g_log, InpNewsFile, InpUseNewsFilter, InpNewsWindowMin))
+     {
+      g_signal.Deinit();
+      delete g_ema;
+      g_ema = NULL;
+      g_signal = NULL;
+      return(INIT_PARAMETERS_INCORRECT);
+     }
+
+   g_log.Info(StringFormat("v2 flags: HTF=%s news=%s noReverse=%s(reentry %d) oppositeExit=%s",
+                           InpUseHTFFilter ? "ON" : "off", InpUseNewsFilter ? "ON" : "off",
+                           InpNoReverse ? "ON" : "off", InpReentryBars, InpUseOppositeExit ? "on" : "OFF"));
    g_clock.Init(_Symbol, _Period);
    g_log.Info(StringFormat("init OK: signal=%s tf=%s", g_signal.Name(), EnumToString(_Period)));
    return(INIT_SUCCEEDED);
@@ -276,16 +319,41 @@ void OnTick()
      }
 
    //--- S3: cross ฝั่งตรงข้ามกับ position ที่ถืออยู่ -> ปิด แล้วค่อยพิจารณาเข้าฝั่งใหม่ (ผ่าน filter + risk ปกติ)
+   //--- V2d: InpUseOppositeExit=false -> ข้ามทั้งก้อน • V2c: InpNoReverse -> ปิดอย่างเดียว + พักเข้าไม้ InpReentryBars แท่ง
    const ENUM_SIGNAL_DIR held = HeldDirection();
-   if(held != SIGNAL_NONE && g_ema.RawCross() == (ENUM_SIGNAL_DIR)(-(int)held))
+   if(InpUseOppositeExit && held != SIGNAL_NONE && g_ema.RawCross() == (ENUM_SIGNAL_DIR)(-(int)held))
      {
       if(!g_trade.CloseAll("opposite cross (S3)"))
          return;                            // ปิดไม่สำเร็จ -> ไม่เปิดไม้ใหม่ (รอบหน้าลองใหม่)
       can_open = g_risk.CanOpen(why);
+      if(InpNoReverse)
+        {
+         g_noreverse_bar = iTime(_Symbol, _Period, 0);
+         g_log.Trade("SKIP", StringFormat("%s : V2c no-reverse ปิดอย่างเดียว พัก %d แท่ง", intent.reason, InpReentryBars));
+         return;
+        }
      }
 
    if(intent.dir == SIGNAL_NONE)
       return;
+
+   //--- V2c: ยังอยู่ในช่วงพักหลังปิดด้วย cross สวน (ห้ามเปิดทุกทิศ)
+   if(InpNoReverse && g_noreverse_bar > 0)
+     {
+      const int bars_since = iBarShift(_Symbol, _Period, g_noreverse_bar, false);
+      if(bars_since >= 0 && bars_since < InpReentryBars)
+        {
+         g_log.Trade("SKIP", StringFormat("%s : V2c re-entry พัก (ผ่านมา %d/%d แท่ง)", intent.reason, bars_since, InpReentryBars));
+         return;
+        }
+     }
+
+   string news_why;
+   if(g_news.BlocksEntry(TimeTradeServer(), news_why))
+     {
+      g_log.Trade("SKIP", StringFormat("%s : %s", intent.reason, news_why));   // V2b
+      return;
+     }
 
    string hol_why;
    if(g_holiday.BlocksEntry(TimeTradeServer(), hol_why))
