@@ -399,9 +399,9 @@ bool CRiskManager::CalcLot(const SSignalIntent &intent, const double entry, doub
       return(false);
      }
 
-   int    digits = (int)SymbolInfoInteger(m_symbol, SYMBOL_DIGITS);
    bool   buy    = (intent.dir == SIGNAL_BUY);
-   double sl     = NormalizeDouble(buy ? entry - intent.sl_distance : entry + intent.sl_distance, digits);
+   //--- helper เดียวกับ CTradeManager::Open: SL ปัดเข้าหา entry บน tick grid -> lot คำนวณจาก SL ที่จะถูกส่งจริง
+   double sl     = NormalizeSlPrice(m_symbol, intent.dir, buy ? entry - intent.sl_distance : entry + intent.sl_distance);
 
    //--- ขาดทุนจริงต่อ 1 lot ที่ราคา SL ในสกุลเงินบัญชี
    double pl = 0.0;

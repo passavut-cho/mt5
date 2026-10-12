@@ -30,5 +30,23 @@ struct SSignalIntent
      }
   };
 
+//--- ปัดราคา SL ลง tick grid แบบ "เข้าหา entry" เสมอ (BUY ปัดขึ้น, SELL ปัดลง)
+//--- เพื่อไม่ให้ SL จริงอยู่ไกลกว่าที่ใช้คำนวณ lot (risk ไม่เกิน %) — ใช้ร่วมกันทั้ง Risk และ Execution
+//--- tick <= 0 -> ใช้ grid ตาม digits (10^-digits); 1e-9 กัน floating noise ไม่ใช่การปัดเพิ่ม
+double NormalizeSlToTick(const double price, const double tick_in, const int digits, const bool buy)
+  {
+   const double tick = (tick_in > 0.0) ? tick_in : MathPow(10.0, -digits);
+   double n = price / tick;
+   const double eps = 1e-9 * MathMax(1.0, MathAbs(n));   // relative: ราคา/tick สูงๆ (BTC, index) noise โตตาม
+   n = buy ? MathCeil(n - eps) : MathFloor(n + eps);
+   return(NormalizeDouble(n * tick, digits));
+  }
+
+double NormalizeSlPrice(const string symbol, const ENUM_SIGNAL_DIR dir, const double price)
+  {
+   return(NormalizeSlToTick(price, SymbolInfoDouble(symbol, SYMBOL_TRADE_TICK_SIZE),
+                            (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS), dir == SIGNAL_BUY));
+  }
+
 #endif
 //+------------------------------------------------------------------+

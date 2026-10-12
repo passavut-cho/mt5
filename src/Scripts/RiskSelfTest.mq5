@@ -117,6 +117,39 @@ void RunPreTradeCases()
   }
 
 //+------------------------------------------------------------------+
+//| ชุด T-010: ปัด SL ตาม tick grid ต้องเข้าหา entry เสมอ (ไม่ไกลกว่าเดิม)  |
+//+------------------------------------------------------------------+
+void ExpectSlNorm(const string name, const double price, const double tick, const int digits,
+                  const bool buy, const double expect)
+  {
+   double r = NormalizeSlToTick(price, tick, digits, buy);
+   Check(MathAbs(r - expect) < 1e-9, StringFormat("T-010 %s : %s sl %.5f tick %.8g -> %.5f (คาด %.5f)", name,
+                                                  buy ? "BUY" : "SELL", price, tick, r, expect));
+   //--- invariant: BUY SL ต้องไม่ต่ำกว่าราคาเดิม, SELL SL ต้องไม่สูงกว่าราคาเดิม (ห่าง entry ไม่เกินที่คิด lot)
+   bool closer = buy ? (r >= price - 1e-9) : (r <= price + 1e-9);
+   Check(closer, "T-010 " + name + " : SL ไม่ไกลกว่าราคาที่ใช้คำนวณ lot");
+  }
+
+void RunSlNormCases()
+  {
+   ExpectSlNorm("tick 0.05 ปัดขึ้น",       2399.97, 0.05, 2, true,  2400.00);
+   ExpectSlNorm("tick 0.05 ปัดลง",         2400.03, 0.05, 2, false, 2400.00);
+   ExpectSlNorm("tick 0.05 อยู่บน grid",   2399.95, 0.05, 2, true,  2399.95);
+   ExpectSlNorm("tick 0.05 ใกล้ grid",     2399.96, 0.05, 2, true,  2400.00);
+   ExpectSlNorm("tick 0.05 SELL ใกล้ grid", 2400.04, 0.05, 2, false, 2400.00);
+   ExpectSlNorm("tick 0.01 = point (ทอง)", 2395.12, 0.01, 2, true,  2395.12);   // บน grid ไม่เปลี่ยน
+   ExpectSlNorm("tick 0.01 ไม่ตรง grid",   2395.123, 0.01, 2, true, 2395.13);
+   ExpectSlNorm("tick 0.01 SELL",          2395.127, 0.01, 2, false, 2395.12);
+   ExpectSlNorm("tick 0 -> grid ตาม digits", 2395.123, 0.0, 2, true, 2395.13);
+   //--- digits อื่น + floating noise: 1.10005/0.00001 = 110004.99999999999 ต้องไม่ถูกดันไป 1 tick
+   ExpectSlNorm("EURUSD บน grid (noise)",  1.10005, 0.00001, 5, true,  1.10005);
+   ExpectSlNorm("EURUSD SELL บน grid",     1.10005, 0.00001, 5, false, 1.10005);
+   ExpectSlNorm("JPY 3 หลัก",              150.1234, 0.001, 3, true,  150.124);
+   ExpectSlNorm("index tick 0.5",          18000.3, 0.5, 1, true,  18000.5);
+   ExpectSlNorm("index tick 0.5 SELL",     18000.7, 0.5, 1, false, 18000.5);
+  }
+
+//+------------------------------------------------------------------+
 //| ชุด B: ตลาดจริง — เทียบกับ OrderCalcProfit ของ broker               |
 //+------------------------------------------------------------------+
 void RunLiveSymbol(const string sym)
@@ -166,7 +199,7 @@ void RunLiveSymbol(const string sym)
         }
 
       double pl = 0.0;
-      double sl = NormalizeDouble(ask - in.sl_distance, (int)SymbolInfoInteger(sym, SYMBOL_DIGITS));
+      double sl = NormalizeSlPrice(sym, SIGNAL_BUY, ask - in.sl_distance);   // helper เดียวกับที่ EA ใช้ส่งจริง
       bool   calc = OrderCalcProfit(ORDER_TYPE_BUY, sym, lot, ask, sl, pl);
       double risk_actual = -pl + lot * InpCommissionPerLot;
       double risk_limit  = AccountInfoDouble(ACCOUNT_EQUITY) * InpRiskPct / 100.0;
@@ -191,6 +224,9 @@ void OnStart()
 
    g_log.Info("== ชุด D4: pre-trade daily limit ==");
    RunPreTradeCases();
+
+   g_log.Info("== ชุด T-010: normalize SL ตาม tick ==");
+   RunSlNormCases();
 
    g_log.Info("== ชุด B: ตลาดจริงของ broker ==");
    string list[];

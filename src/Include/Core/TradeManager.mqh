@@ -161,7 +161,7 @@ bool CTradeManager::Open(const ENUM_SIGNAL_DIR dir, const double lot, const doub
       return(false);
      }
 
-   const double sl   = NormPrice(sl_in);
+   const double sl   = NormalizeSlPrice(m_symbol, dir, sl_in);   // helper เดียวกับ CalcLot (ปัดเข้าหา entry)
    const double tp   = (tp_in > 0.0) ? NormPrice(tp_in) : 0.0;
    const string side = (dir == SIGNAL_BUY) ? "BUY" : "SELL";
 
