@@ -52,7 +52,7 @@
 > - **3b Strategy research (in-sample 2023–2024 เท่านั้น)** — spec v2 จาก `docs/strategy/v2-options.md`; ทุก variant ต้องเขียน hypothesis ก่อนรัน และบันทึกผลทุกตัว (รวมที่แพ้) ใน `docs/strategy/experiments.md` • จำกัด ≤ 6 variants ต่อรอบ
 > - **Pre-validation bar** (ต้องผ่านก่อนเปิด 2025): in-sample **Model=1** หลังหัก commission **PF ≥ 1.1 และ PF ภายใต้ cost stress +20 points ≥ 1.0, trades ≥ 100, MaxDD ≤ 25%**
 > - **Real ticks (R1–R3, 2026-10-12):** IC มี real ticks ทองเฉพาะ 2026-04→ — Phase 3 ใช้ Model=1 + stress • real ticks ใช้ใน Phase 4 (OOS 2026-04→09 รันครั้งเดียว) + Phase 5 demo • ยังไม่นำเข้า tick data ภายนอก
-> - **Data split ใหม่ (N1, 2026-10-12):** research set หลัก **2017–2022** (แก้ 2026-10-19: IC มี M1 จริงตั้งแต่ 2017 — T-030) • 2023–2024 = in-sample รอง (ใช้แล้วกับ EMA) • 2025 validation • 2026 OOS
+> - **Data split ใหม่ (N1, 2026-10-12):** research set หลัก **2018–2022** (แก้ 2026-10-19: M1 เต็มของ IC เริ่มกลางปี 2017 → ใช้ปีเต็มแรก 2018 — T-030 รอบ 1–2) • timezone ยืนยันแล้ว = NY+7 คงที่ทุกฤดู • 2023–2024 = in-sample รอง (ใช้แล้วกับ EMA) • 2025 validation • 2026 OOS
 > - **3c Validation** — เปิด 2025 ได้เฉพาะ variant ที่ผ่าน bar • **ทุกครั้งที่รันบน 2025 ต้องบวก `validation_looks` ใน STATUS.md** • ถ้า looks > 3 ให้ถือว่า 2025 ปนเปื้อน ต้องใช้ OOS 2026 ตัดสินแทน (และ OOS ยังห้ามแตะจน Phase 4)
 
 **งาน (3c)**

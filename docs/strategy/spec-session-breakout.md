@@ -1,7 +1,7 @@
 # Strategy Spec — Session Breakout (S-A) v1
 
 **Status:** APPROVED for research (Owner 2026-10-12: N1–N3 ตามที่เสนอ) • Signal class ใหม่ `CSessionBreakoutSignal` — **ไม่แตะ Core / RiskManager**
-**Data:** research set **2017-01-01 → 2022-12-31** (แก้ 2026-10-19: IC มี M1 จริงตั้งแต่ 2017 เท่านั้น — T-030) (Model=1 + cost stress +20) • 2023–2024 = ตรวจรอง • 2025 validation • 2026 OOS (ห้ามแตะ)
+**Data:** research set **2018-01-01 → 2022-12-31** (แก้ 2026-10-19 ครั้งที่ 2: T-030 รอบ 2 พบว่าต้นปี 2017 ยังเป็นข้อมูลราย ชม. → เริ่มปีเต็มแรกที่ข้อมูลครบ, ตัดสินก่อนเห็นผลใดๆ) (Model=1 + cost stress +20) • 2023–2024 = ตรวจรอง • 2025 validation • 2026 OOS (ห้ามแตะ)
 
 ## Hypothesis (เขียนก่อนรัน)
 ทองช่วงเอเชีย (server 01:00–09:59) เคลื่อนในกรอบแคบ ส่วนช่วง London/NY มีแรงซื้อขายหลัก → **การทะลุกรอบเอเชียครั้งแรกของวันมีทิศทางต่อเนื่องพอให้ expectancy เป็นบวกหลังหักต้นทุน** และต้องเป็นจริง **ทั้งฝั่ง long และ short และในหลาย regime** (ไม่ใช่แค่ขาขึ้น)
@@ -24,10 +24,10 @@
 | A3 | กลางกรอบ (½ ความกว้าง) | time exit 23:30 เท่านั้น |
 | A4 | กลางกรอบ | TP = 2R |
 
-## Pre-validation bar (รอบนี้ — ต้องผ่านทุกข้อบน research set 2017–2022)
+## Pre-validation bar (รอบนี้ — ต้องผ่านทุกข้อบน research set 2018–2022)
 - PF หลังหัก commission **≥ 1.1** และ PF ภายใต้ stress +20 **≥ 1.0**
 - trades ≥ 100 • MaxDD ≤ 25%
-- **ปีที่กำไร ≥ 60%** (≥ 4 จาก 6 ปี) • **long PF ≥ 1.0 และ short PF ≥ 1.0** (กัน regime bias)
+- **ปีที่กำไร ≥ 60%** (≥ 3 จาก 5 ปี) • **long PF ≥ 1.0 และ short PF ≥ 1.0** (กัน regime bias)
 - ผ่าน → ตรวจรองบน 2023–2024 (ต้องไม่ขาดทุนเกิน 10%) → ค่อยเปิด 2025 (validation_looks +1)
 
 ## Inputs ใหม่
