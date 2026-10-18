@@ -1,7 +1,7 @@
 # Project Status
 
 **Current phase:** 3 — Validation — Phase 2 gate ผ่าน 2026-10-12 (tag p2-done, Owner อนุมัติ)
-**Last updated:** 2026-10-12
+**Last updated:** 2026-10-19
 **validation_looks (2025):** 0 • **OOS (2026) looks:** 0
 **Broker เป้าหมาย:** IC Markets (Raw Trading Ltd, FSA Seychelles) — demo บัญชี Raw
 
@@ -98,3 +98,5 @@ _กำหนดก่อนเริ่ม Phase 5 ห้ามแก้ระ�
 - **T-027 (2026-10-12): DONE 0b3c6c7** — `report_stats.py --extra-cost-points N` (+ `--contract-size`, `--point`): หักต้นทุนเพิ่ม N×contract×point×lot ต่อไม้ แสดง base คู่ stress • ทดสอบ ema_v1.htm: base net −3,777.38 เท่าเดิม, stress 20 → −5,714.38 (หักเพิ่ม 1,937.00 = 96.85 lot × 20) PF 0.74 DD 59.3% • backtest-analyst.md ต้องรายงาน stress ทุกครั้งตั้งแต่ Phase 3 • T-025 ปลดล็อกแล้ว
 
 - **T-025 (2026-10-12): DONE** — E2–E5 in-sample Model=1 + stress +20: ทุก variant ขาดทุน (base PF 0.81–0.83, stress 0.73–0.75); E2 HTF เหลือ 183 ไม้ DD 26.5% แต่ PF ไม่ดีขึ้น; short PF 0.60–0.70 ทุกตัว, long PF 1.09–1.17 • ไม่มี flag เดี่ยวที่ผ่านเกณฑ์ E6 (PF ≥1.1) → **รอ Owner/Cowork ตัดสิน E6** (รวม flag หรือเปลี่ยนแนวทาง เช่น long-only) • ตัวเลขใน docs/strategy/experiments.md • compile 0/0 • 2025/2026 ไม่ถูกแตะ (looks = 0)
+
+- **T-029 (2026-10-19): DONE** — ขยายปฏิทินย้อนหลัง 2010–2022: `news.csv` +417 แถว (NFP 156 / CPI 156 จาก BLS archive; FOMC 105 = 103 นัดปกติ + 2 นัดพิเศษ 2020-03-03, 2020-03-15 โดย**เวลาจริงแต่ละนัดอ่านจากบรรทัด "to be released at" ใน FOMC minutes** — 2010–2012 มี 14:15/12:30 ET, 2013-03 เป็นต้นไป 14:00 ET) • `holidays.csv` +152 แถว (กฎวันหยุด federal + Good Friday, tag `fed`; early_close = `probable`) • `covered_years` news = 2010–2024, holidays = 2010–2026 • แหล่ง/ข้อจำกัดใน `docs/research/news-calendar.md` • **ข้อควรระวัง:** holidays ปี 2010–2022 ยังไม่เทียบกับประกาศ CME/IC รายปี, ไม่ได้ใส่ conference call/notation vote ที่ไม่มี statement นโยบาย • ไม่แตะ src/ (ไม่ต้อง compile) • **ปลดล็อก T-032 บางส่วน (ยังรอ T-030, T-031)**
