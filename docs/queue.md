@@ -207,19 +207,18 @@ needs: none
 depends: —
 goal: เติมแถวปี 2010–2022 ใน data/files/holidays.csv (US/CME holiday + early close ที่กระทบ COMEX gold) และ data/files/news.csv (NFP, CPI 08:30 ET = 15:30 server / FOMC statement ใช้ **เวลาประกาศจริงของแต่ละครั้ง** แปลงเป็น server = ET+7 — ระวังปี 2011–2012 บางนัดประกาศ 12:30 ET หรือ 14:15 ET ไม่ใช่ 14:00 — รวม FOMC นัดพิเศษ เช่น 2020-03-03, 2020-03-15 ถ้ามีเวลาประกาศชัด) จากแหล่งทางการ (BLS release archives, federalreserve.gov FOMC historical) ด้วย WebSearch/WebFetch • ใส่ verified ตามแหล่ง • อัปเดต `# covered_years:` ทั้ง 2 ไฟล์ • **ห้ามเดา — ปีไหนหาแหล่งทางการไม่ได้ให้ไม่ใส่ปีนั้นใน covered_years** แล้วรายงาน • บันทึกแหล่งใน docs/research/news-calendar.md • push พร้อม hash
 
-## T-030 · P3 · ตรวจ timezone ของ history IC ช่วง 2010–2022
-status: BLOCKED history IC ก่อน 2017 ไม่มี M1 (2011/2014 ไม่มีข้อมูล, 2016 เป็นราย ชม., 2021-04-02 วันหยุด) และ 2019-02-01 แท่งใหญ่สุดคือ 17:00 (ISM) ไม่ใช่ 15:30 — ดู docs/research/history-timezone.md
+## T-030 · P3 · ตรวจ timezone ของ history IC ช่วง 2017–2022 (รอบ 2)
+status: READY
 needs: mt5-closed
 depends: —
-goal: ยืนยันว่าแท่ง M15 XAUUSD ของ IC ในอดีตใช้ server time = New York + 7 ชม. เหมือนปัจจุบัน: สร้าง script หรือ backtest สั้นที่พิมพ์ช่วง M15 ที่ range (high−low) ใหญ่สุดของวัน NFP 5 วัน (เช่น 2011-08-05, 2014-03-07, 2016-07-08, 2019-02-01, 2021-04-02) → แท่งใหญ่สุดต้องเริ่ม 15:30 server ทุกวัน • ถ้าไม่ตรง (เช่น เป็น 14:30 หรือ 16:30) ให้ BLOCKED พร้อมตาราง offset ที่พบ — เพราะ session/news filter จะผิดทั้งหมด • บันทึกผลใน docs/research/history-timezone.md
-
+goal: [แก้โดย Cowork 2026-10-19 หลังรอบ 1 BLOCKED 01ea07e: IC มี M1 จริงตั้งแต่ 2017 เท่านั้น; วัน 2019-02-01 แท่งใหญ่สุดคือ ISM 10:00 ET = 17:00 server ซึ่งสอดคล้องกับ ET+7] ใช้ TzCheck เดิมกับวัน NFP 6 วันที่ครอบทั้งช่วง US standard time และ DST: **2017-03-10 (ก่อนเปลี่ยน DST), 2017-07-07, 2018-12-07, 2019-06-07, 2020-08-07, 2022-02-04** • เกณฑ์ใหม่: แท่ง 15:30 server ต้องอยู่ใน **top-3 range ของวัน** ทุกวัน **และ** แท่งที่ใหญ่ที่สุดในช่วง 14:00–17:30 ต้องเป็น 15:30 หรือ 15:45 อย่างน้อย 5/6 วัน (ถ้าเวลาเลื่อน ±1 ชม. เฉพาะหน้าหนาวหรือหน้าร้อน = timezone ไม่ใช่ NY+7 → BLOCKED พร้อมตาราง) • อัปเดต docs/research/history-timezone.md • push พร้อม hash
 ## T-031 · P3 · Implement CSessionBreakoutSignal (S-A)
 status: READY
 needs: none
 depends: —
-goal: implement ตาม docs/strategy/spec-session-breakout.md เป็น Signal class ใหม่ + `InpStrategy` เลือก signal (default EMA_ADX = พฤติกรรมเดิม) • ห้ามแตะ RiskManager/Config • สร้าง tests/setfiles/sbo_a1..a4.set และ tests/tester-ini/sbo_research.ini (XAUUSD M15 2010.01.01–2022.12.31, Model=1, Leverage=1:500, Deposit=10000) • regression: InpStrategy=EMA_ADX + ema_v1.set ต้องได้ 426 ไม้ net −3,777.38 (ถ้า MT5 เปิดอยู่ให้ข้าม regression และบอกใน report ว่ายังไม่รัน) • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER • push พร้อม hash
+goal: implement ตาม docs/strategy/spec-session-breakout.md เป็น Signal class ใหม่ + `InpStrategy` เลือก signal (default EMA_ADX = พฤติกรรมเดิม) • ห้ามแตะ RiskManager/Config • สร้าง tests/setfiles/sbo_a1..a4.set และ tests/tester-ini/sbo_research.ini (XAUUSD M15 **2017.01.01–2022.12.31**, Model=1, Leverage=1:500, Deposit=10000) • regression: InpStrategy=EMA_ADX + ema_v1.set ต้องได้ 426 ไม้ net −3,777.38 (ถ้า MT5 เปิดอยู่ให้ข้าม regression และบอกใน report ว่ายังไม่รัน) • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER • push พร้อม hash
 
-## T-032 · P3 · Experiments A1–A4 บน research set 2010–2022
+## T-032 · P3 · Experiments A1–A4 บน research set 2017–2022
 status: READY
 needs: mt5-closed
 depends: T-029, T-030, T-031
@@ -232,7 +231,7 @@ depends: —
 goal: อ่าน docs/strategy/spec-donchian-h4.md แล้วตอบ O1–O3
 
 ## T-034 · Tooling · Telemetry ใน EA (dashboard data)
-status: READY
+status: DONE c655103
 needs: none
 depends: —
 goal: implement ส่วน EA ของ docs/specs/dashboard-v1.md: src/Include/Core/Telemetry.mqh (CTelemetry) เขียน fills.csv / trades.csv / equity_snap.csv / status.json ตาม data contract ลง `SmartEA\telemetry\` (FILE_SHARE_READ, flush ทุกครั้ง) • hook ใน TradeManager จับ requested/fill/latency/spread/retcode ทุก OrderSend • status.json เพิ่ม bid/ask, ATR M15/D1 ($), Asian range วันนี้ (high/low/width), spread snapshot สำหรับสถิติรายชั่วโมง • OnTimer 30s (EventSetTimer/EventKillTimer) • input `InpTelemetry=true`, ปิดอัตโนมัติใน tester/optimization • เขียนไฟล์ล้มเหลว = Warn ครั้งเดียวแล้วเทรดต่อ (ห้าม block การเทรด) • **ห้ามแตะ RiskManager/Config** (อ่านค่า day_start/limit ผ่าน getter ที่มีอยู่) • สร้าง data/files/telemetry/.gitkeep และเพิ่ม data/files/telemetry/*.csv|json ใน .gitignore (ข้อมูลบัญชีไม่ขึ้น git) • regression ema_v1 426 ไม้ net −3,777.38 เท่าเดิม (ถ้า MT5 เปิดอยู่ข้ามได้แต่ต้องบอก) • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER • push พร้อม hash
