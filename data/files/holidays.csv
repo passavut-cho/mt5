@@ -57,3 +57,16 @@ date,type,note,verified
 2026-12-24,early_close,Christmas Eve,probable
 2026-12-25,closed,Christmas,cme
 2026-12-31,early_close,New Year's Eve,probable
+# 2027 DRAFT (Cowork 2026-10-18, computed from US holiday rules - CME 2027 calendar not yet published) - NOT in covered_years until verified (T-018)
+2027-01-01,closed,New Year,computed
+2027-01-18,early_halt,MLK Day,computed
+2027-02-15,early_halt,Presidents Day,computed
+2027-03-26,closed,Good Friday,computed
+2027-05-31,early_halt,Memorial Day,computed
+2027-06-18,early_halt,Juneteenth (observed - Jun 19 is Saturday),computed
+2027-07-05,early_halt,Independence Day (observed - Jul 4 is Sunday),computed
+2027-09-06,early_halt,Labor Day,computed
+2027-11-25,closed,Thanksgiving,computed
+2027-11-26,early_close,Day after Thanksgiving,probable
+2027-12-24,closed,Christmas (observed - Dec 25 is Saturday),computed
+2027-12-31,early_close,New Year's Eve,probable

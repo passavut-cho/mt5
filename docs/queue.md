@@ -136,7 +136,7 @@ depends: T-011
 goal: implement ตาม spec ข้อ 11 "S9 — Owner อนุมัติ": อ่าน MQL5\Files\SmartEA\holidays.csv (ข้ามบรรทัด #, parse `# covered_years:`), `#property tester_file "SmartEA\\holidays.csv"`, input InpUseHolidayFilter/InpHolidayFile, ไม่เปิดไม้ใหม่ในวันที่อยู่ในไฟล์, fail closed เมื่อปีไม่อยู่ใน covered_years หรืออ่านไฟล์ไม่ได้ (Warn วันละครั้ง). ใส่ logic ใน Signals/ หรือ Expert — ห้ามแตะ RiskManager/Config. log ทุกครั้งที่ข้ามสัญญาณเพราะวันหยุด. จบเมื่อ compile 0/0, qa-reviewer ไม่มี BLOCKER, risk-guardian PASS, push สำเร็จพร้อม hash
 
 ## T-018 · ทุกปี · อัปเดต holidays.csv สำหรับปี 2027
-status: WAIT_OWNER
+status: WAIT_OWNER — Cowork ใส่ร่าง 2027 (12 แถว, verified=computed/probable) แล้ว 2026-10-18 แต่ยังไม่ใส่ 2027 ใน covered_years • รอ CME ประกาศปฏิทิน 2027 → ยืนยัน + ตรวจแถว probable 2026-12-24/31 (เตือนอัตโนมัติ 1 ธ.ค.)
 needs: owner
 depends: —
 goal: ภายใน 2026-12-15: Cowork ดึง CME holiday calendar 2027 (COMEX metals) + ตรวจกับประกาศ IC → เพิ่มแถว 2027 + covered_years ใน data/files/holidays.csv → Owner รับทราบ → Code commit `data: holidays 2027` (สร้าง T ใหม่ของปีถัดไปทุกครั้งที่ปิดงานนี้)
