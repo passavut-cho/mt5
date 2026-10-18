@@ -8,6 +8,7 @@
 ## T-NNN · P<phase> · <ชื่อสั้น>
 status: READY | IN_PROGRESS | DONE <hash> | BLOCKED <เหตุผล> | WAIT_OWNER
 needs: none | mt5-closed | owner | risk-edit
+agent: claude | codex | any   (ไม่ระบุ = claude) — ADR 0003
 depends: T-xxx, T-yyy  (หรือ —)
 goal: <เงื่อนไขจบที่ตรวจได้จาก transcript>
 ```
@@ -259,3 +260,17 @@ status: READY
 needs: risk-edit
 depends: —
 goal: T-034 คำนวณ breaker_limit ซ้ำใน Telemetry ด้วยสูตรเดียวกับ RiskManager → ถ้าวันหนึ่งสูตรใน RiskManager เปลี่ยน dashboard จะแสดงค่าผิดโดยไม่รู้ตัว • เพิ่ม getter **อ่านอย่างเดียว** `double BreakerLimit() const` ใน CRiskManager (ไม่เปลี่ยน logic/ค่าใดๆ) แล้วให้ Telemetry ใช้ getter นี้ • compile 0/0, risk-guardian PASS (ต้องยืนยันว่า diff ของ RiskManager มีแค่ getter), regression ema_v1 426 ไม้ • ทำใน session interactive (ไฟล์ risk ต้องให้ Owner กดอนุญาต)
+
+## T-039 · Tooling · เปิดใช้ pre-commit hook + ทดสอบ (ADR 0003 M4)
+status: READY
+needs: none
+agent: claude
+depends: —
+goal: รัน `git config core.hooksPath scripts/hooks` ใน repo หลัก (Owner ต้องกดอนุญาต เพราะ settings deny การแก้ hooksPath → ทำใน session interactive หรือให้ Owner รันเองใน PowerShell) • ทดสอบ 3 กรณีบน branch ทดลองแล้วลบทิ้ง: (1) แก้ comment ใน RiskManager.mqh แล้ว commit ปกติ → ต้องถูกบล็อก (2) commit ไฟล์อื่น → ผ่าน (3) commit ไฟล์ทั่วไปไม่โดนผลกระทบ • ห้าม commit การแก้ RiskManager จากการทดสอบ (`git restore`) • commit scripts/hooks/pre-commit, AGENTS.md, .codex/AGENTS.migrated-backup.md, ADR 0003 (ห้าม commit .agents/ .codex/ ส่วนอื่นจนกว่า Owner บอก) • push พร้อม hash
+
+## T-040 · Tooling · ตั้ง worktree ให้ Codex
+status: WAIT_OWNER
+needs: owner
+agent: claude
+depends: T-039
+goal: Owner รันใน PowerShell: `cd "D:\Claude Projects\MT5"; git worktree add "..\MT5-codex" -b codex/sandbox` → เปิด Codex ในโฟลเดอร์ `D:\Claude Projects\MT5-codex` • ทดสอบว่า Codex อ่าน AGENTS.md แล้วตอบได้ว่า lane ของตัวเองคืออะไร และ commit ลง main ใน worktree นั้นถูก hook บล็อก

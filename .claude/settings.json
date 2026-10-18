@@ -23,7 +23,8 @@
       "Edit(src/Include/Config/**)",
       "Write(src/Include/Config/**)",
       "Edit(src/Include/Core/RiskManager.mqh)",
-      "Write(src/Include/Core/RiskManager.mqh)"
+      "Write(src/Include/Core/RiskManager.mqh)",
+      "Bash(SMARTEA_RISK_EDIT=1 git commit*)"
     ],
     "deny": [
       "Read(scripts/config.local.ps1)",
@@ -34,7 +35,10 @@
       "Bash(git clean*)",
       "Bash(git rebase -i*)",
       "Bash(git add -f*)",
-      "Bash(git add --force*)"
+      "Bash(git add --force*)",
+      "Bash(git commit --no-verify*)",
+      "Bash(git commit -n *)",
+      "Bash(git config core.hooksPath*)"
     ]
   }
 }
