@@ -208,7 +208,7 @@ depends: —
 goal: เติมแถวปี 2010–2022 ใน data/files/holidays.csv (US/CME holiday + early close ที่กระทบ COMEX gold) และ data/files/news.csv (NFP, CPI 08:30 ET = 15:30 server / FOMC statement ใช้ **เวลาประกาศจริงของแต่ละครั้ง** แปลงเป็น server = ET+7 — ระวังปี 2011–2012 บางนัดประกาศ 12:30 ET หรือ 14:15 ET ไม่ใช่ 14:00 — รวม FOMC นัดพิเศษ เช่น 2020-03-03, 2020-03-15 ถ้ามีเวลาประกาศชัด) จากแหล่งทางการ (BLS release archives, federalreserve.gov FOMC historical) ด้วย WebSearch/WebFetch • ใส่ verified ตามแหล่ง • อัปเดต `# covered_years:` ทั้ง 2 ไฟล์ • **ห้ามเดา — ปีไหนหาแหล่งทางการไม่ได้ให้ไม่ใส่ปีนั้นใน covered_years** แล้วรายงาน • บันทึกแหล่งใน docs/research/news-calendar.md • push พร้อม hash
 
 ## T-030 · P3 · ตรวจ timezone ของ history IC ช่วง 2010–2022
-status: READY
+status: BLOCKED history IC ก่อน 2017 ไม่มี M1 (2011/2014 ไม่มีข้อมูล, 2016 เป็นราย ชม., 2021-04-02 วันหยุด) และ 2019-02-01 แท่งใหญ่สุดคือ 17:00 (ISM) ไม่ใช่ 15:30 — ดู docs/research/history-timezone.md
 needs: mt5-closed
 depends: —
 goal: ยืนยันว่าแท่ง M15 XAUUSD ของ IC ในอดีตใช้ server time = New York + 7 ชม. เหมือนปัจจุบัน: สร้าง script หรือ backtest สั้นที่พิมพ์ช่วง M15 ที่ range (high−low) ใหญ่สุดของวัน NFP 5 วัน (เช่น 2011-08-05, 2014-03-07, 2016-07-08, 2019-02-01, 2021-04-02) → แท่งใหญ่สุดต้องเริ่ม 15:30 server ทุกวัน • ถ้าไม่ตรง (เช่น เป็น 14:30 หรือ 16:30) ให้ BLOCKED พร้อมตาราง offset ที่พบ — เพราะ session/news filter จะผิดทั้งหมด • บันทึกผลใน docs/research/history-timezone.md
@@ -235,16 +235,22 @@ goal: อ่าน docs/strategy/spec-donchian-h4.md แล้วตอบ O1–
 status: READY
 needs: none
 depends: —
-goal: implement ส่วน EA ของ docs/specs/dashboard-v1.md: src/Include/Core/Telemetry.mqh (CTelemetry) เขียน fills.csv / trades.csv / equity_snap.csv / status.json ตาม data contract ลง `SmartEA\telemetry\` (FILE_SHARE_READ, flush ทุกครั้ง) • hook ใน TradeManager จับ requested/fill/latency/spread/retcode ทุก OrderSend • OnTimer 30s (EventSetTimer/EventKillTimer) • input `InpTelemetry=true`, ปิดอัตโนมัติใน tester/optimization • เขียนไฟล์ล้มเหลว = Warn ครั้งเดียวแล้วเทรดต่อ (ห้าม block การเทรด) • **ห้ามแตะ RiskManager/Config** (อ่านค่า day_start/limit ผ่าน getter ที่มีอยู่) • สร้าง data/files/telemetry/.gitkeep และเพิ่ม data/files/telemetry/*.csv|json ใน .gitignore (ข้อมูลบัญชีไม่ขึ้น git) • regression ema_v1 426 ไม้ net −3,777.38 เท่าเดิม (ถ้า MT5 เปิดอยู่ข้ามได้แต่ต้องบอก) • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER • push พร้อม hash
+goal: implement ส่วน EA ของ docs/specs/dashboard-v1.md: src/Include/Core/Telemetry.mqh (CTelemetry) เขียน fills.csv / trades.csv / equity_snap.csv / status.json ตาม data contract ลง `SmartEA\telemetry\` (FILE_SHARE_READ, flush ทุกครั้ง) • hook ใน TradeManager จับ requested/fill/latency/spread/retcode ทุก OrderSend • status.json เพิ่ม bid/ask, ATR M15/D1 ($), Asian range วันนี้ (high/low/width), spread snapshot สำหรับสถิติรายชั่วโมง • OnTimer 30s (EventSetTimer/EventKillTimer) • input `InpTelemetry=true`, ปิดอัตโนมัติใน tester/optimization • เขียนไฟล์ล้มเหลว = Warn ครั้งเดียวแล้วเทรดต่อ (ห้าม block การเทรด) • **ห้ามแตะ RiskManager/Config** (อ่านค่า day_start/limit ผ่าน getter ที่มีอยู่) • สร้าง data/files/telemetry/.gitkeep และเพิ่ม data/files/telemetry/*.csv|json ใน .gitignore (ข้อมูลบัญชีไม่ขึ้น git) • regression ema_v1 426 ไม้ net −3,777.38 เท่าเดิม (ถ้า MT5 เปิดอยู่ข้ามได้แต่ต้องบอก) • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER • push พร้อม hash
 
 ## T-035 · Tooling · scripts/dashboard.py + run_dashboard.ps1
 status: READY
 needs: none
 depends: —
-goal: สร้าง scripts/dashboard.py (Python stdlib เท่านั้น) อ่าน data/files/telemetry/* → เขียน data/dashboard/index.html ไฟล์เดียว (CSS/JS/SVG inline, ไม่โหลด CDN, dark theme, meta refresh 30s) ครบทุก panel ใน spec (ตัด license panel) • โหมด `--report <MT5 report .htm>` สร้าง dashboard จาก backtest (execution = "N/A ใน tester") • scripts/run_dashboard.ps1 วน generate ทุก 30s และเปิด browser ครั้งแรก • ทดสอบด้วย: (1) `--report data/reports/SmartEA_ema_v1.htm` ต้องได้ 426 ไม้, net หลังหัก comm −3,777.38 ตรง report_stats.py (2) fixture telemetry ปลอมใน tests/python/fixtures/telemetry/ ที่มี slip บวก/ลบ ให้ median/p90/grade คำนวณถูก (มี unit test `tests/python/test_dashboard.py`) • data/dashboard/ อยู่ใน .gitignore • push พร้อม hash
+goal: สร้าง scripts/dashboard.py (Python stdlib เท่านั้น) อ่าน data/files/telemetry/* → เขียน data/dashboard/index.html ไฟล์เดียว (CSS/JS/SVG inline, ไม่โหลด CDN, dark theme, meta refresh 30s) ครบทุก panel ใน spec (ตัด license panel) **รวม XAUUSD-specific panels** (gold header, by session, news days, swap, spread by hour) • โหมด `--report <MT5 report .htm>` สร้าง dashboard จาก backtest (execution = "N/A ใน tester") • scripts/run_dashboard.ps1 วน generate ทุก 30s และเปิด browser ครั้งแรก • ทดสอบด้วย: (1) `--report data/reports/SmartEA_ema_v1.htm` ต้องได้ 426 ไม้, net หลังหัก comm −3,777.38 ตรง report_stats.py (2) fixture telemetry ปลอมใน tests/python/fixtures/telemetry/ ที่มี slip บวก/ลบ ให้ median/p90/grade คำนวณถูก (มี unit test `tests/python/test_dashboard.py`) • data/dashboard/ อยู่ใน .gitignore • push พร้อม hash
 
 ## T-036 · Tooling · Owner ทดลอง dashboard บน demo
 status: WAIT_OWNER
 needs: owner
 depends: T-034, T-035, T-006
 goal: Owner ลาก SmartEA (InpTelemetry=true) ลง chart XAUUSD บน IC demo ที่ balance 10,000 (T-006) → รัน scripts/run_dashboard.ps1 → ส่ง screenshot ให้ Cowork ตรวจว่าทุก panel มีข้อมูลและตัวเลขตรงกับ MT5
+
+## T-037 · Scope · EA รันได้เฉพาะ XAUUSD
+status: READY
+needs: none
+depends: —
+goal: Owner กำหนด scope XAUUSD only (2026-10-19) → ใน OnInit ของ SmartEA.mq5 ตรวจ `SYMBOL_CURRENCY_BASE == "XAU"` และ `SYMBOL_CURRENCY_PROFIT == "USD"` (รองรับชื่อมี suffix เช่น XAUUSD.m / GOLD) ถ้าไม่ใช่ → log Error แล้ว `return INIT_FAILED` • ห้าม hardcode ชื่อ symbol (กฎเหล็กข้อ 5 ยังใช้ `_Symbol`) • RiskSelfTest ชุด EURUSD ยังเก็บไว้ (ทดสอบสูตร ไม่ใช่การเทรด) • compile 0/0, qa-reviewer ไม่มี BLOCKER, ทดสอบ: tester บน EURUSD ต้องได้ INIT_FAILED พร้อมข้อความ, บน XAUUSD ต้อง init ปกติ (regression ema_v1 426 ไม้ ถ้า MT5 ปิดอยู่) • push พร้อม hash
