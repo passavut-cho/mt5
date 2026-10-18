@@ -208,7 +208,7 @@ depends: —
 goal: เติมแถวปี 2010–2022 ใน data/files/holidays.csv (US/CME holiday + early close ที่กระทบ COMEX gold) และ data/files/news.csv (NFP, CPI 08:30 ET = 15:30 server / FOMC statement ใช้ **เวลาประกาศจริงของแต่ละครั้ง** แปลงเป็น server = ET+7 — ระวังปี 2011–2012 บางนัดประกาศ 12:30 ET หรือ 14:15 ET ไม่ใช่ 14:00 — รวม FOMC นัดพิเศษ เช่น 2020-03-03, 2020-03-15 ถ้ามีเวลาประกาศชัด) จากแหล่งทางการ (BLS release archives, federalreserve.gov FOMC historical) ด้วย WebSearch/WebFetch • ใส่ verified ตามแหล่ง • อัปเดต `# covered_years:` ทั้ง 2 ไฟล์ • **ห้ามเดา — ปีไหนหาแหล่งทางการไม่ได้ให้ไม่ใส่ปีนั้นใน covered_years** แล้วรายงาน • บันทึกแหล่งใน docs/research/news-calendar.md • push พร้อม hash
 
 ## T-030 · P3 · ตรวจ timezone ของ history IC ช่วง 2017–2022 (รอบ 2)
-status: READY
+status: BLOCKED เกณฑ์ตัวเลขไม่ครบ (4/6 ข้อ 2; 2017-03-10 ข้อมูลราย ชม., 2020-08-07 แท่ง 17:00 ใหญ่กว่า) แต่หนาว/ร้อนไม่เลื่อน = NY+7 — ดู docs/research/history-timezone.md รอบ 2
 needs: mt5-closed
 depends: —
 goal: [แก้โดย Cowork 2026-10-19 หลังรอบ 1 BLOCKED 01ea07e: IC มี M1 จริงตั้งแต่ 2017 เท่านั้น; วัน 2019-02-01 แท่งใหญ่สุดคือ ISM 10:00 ET = 17:00 server ซึ่งสอดคล้องกับ ET+7] ใช้ TzCheck เดิมกับวัน NFP 6 วันที่ครอบทั้งช่วง US standard time และ DST: **2017-03-10 (ก่อนเปลี่ยน DST), 2017-07-07, 2018-12-07, 2019-06-07, 2020-08-07, 2022-02-04** • เกณฑ์ใหม่: แท่ง 15:30 server ต้องอยู่ใน **top-3 range ของวัน** ทุกวัน **และ** แท่งที่ใหญ่ที่สุดในช่วง 14:00–17:30 ต้องเป็น 15:30 หรือ 15:45 อย่างน้อย 5/6 วัน (ถ้าเวลาเลื่อน ±1 ชม. เฉพาะหน้าหนาวหรือหน้าร้อน = timezone ไม่ใช่ NY+7 → BLOCKED พร้อมตาราง) • อัปเดต docs/research/history-timezone.md • push พร้อม hash
