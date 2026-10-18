@@ -38,6 +38,9 @@ public:
    bool              Init(CLogger *log, const string file, const bool enabled);
    //--- true = ห้ามเปิดไม้ใหม่ ณ เวลา t (why = เหตุผลสำหรับ log)
    bool              BlocksEntry(const datetime t, string &why);
+   //--- อ่านอย่างเดียวสำหรับ telemetry (ไม่ reload ไม่ Warn ไม่กระทบการตัดสิน)
+   bool              IsHoliday(const datetime t) const;
+   int               CoveredUntilYear() const;   // ปีสุดท้ายใน covered_years • 0 = ยังไม่โหลด
   };
 
 //+------------------------------------------------------------------+
@@ -172,6 +175,28 @@ void CHolidayFilter::WarnOncePerDay(const int day, const string msg)
       return;
    m_warn_day = day;
    m_log.Warn(msg);
+  }
+
+//+------------------------------------------------------------------+
+bool CHolidayFilter::IsHoliday(const datetime t) const
+  {
+   if(!m_loaded)
+      return(false);
+   const int day = DayKey(t);
+   for(int i = 0; i < ArraySize(m_dates); i++)
+      if(m_dates[i] == day)
+         return(true);
+   return(false);
+  }
+
+int CHolidayFilter::CoveredUntilYear() const
+  {
+   int y = 0;
+   if(!m_loaded)
+      return(0);
+   for(int i = 0; i < ArraySize(m_years); i++)
+      y = MathMax(y, m_years[i]);
+   return(y);
   }
 
 //+------------------------------------------------------------------+

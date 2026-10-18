@@ -38,6 +38,10 @@ public:
    bool              Init(CLogger *log, const string file, const bool enabled, const int window_min);
    //--- true = ห้ามเปิดไม้ใหม่ ณ เวลา t (why = เหตุผลสำหรับ log)
    bool              BlocksEntry(const datetime t, string &why);
+   //--- อ่านอย่างเดียวสำหรับ telemetry (ไม่ reload ไม่ Warn ไม่กระทบการตัดสิน)
+   int               CoveredUntilYear() const;   // 0 = ยังไม่โหลด/ปิด flag
+   bool              InWindow(const datetime t) const;
+   bool              NextEvent(const datetime t, string &name, datetime &when) const;   // event แรกที่ยังไม่ผ่านพ้น t
   };
 
 //+------------------------------------------------------------------+
@@ -175,6 +179,46 @@ void CNewsFilter::WarnOncePerDay(const int day, const string msg)
       return;
    m_warn_day = day;
    m_log.Warn(msg);
+  }
+
+//+------------------------------------------------------------------+
+int CNewsFilter::CoveredUntilYear() const
+  {
+   int y = 0;
+   if(!m_loaded)
+      return(0);
+   for(int i = 0; i < ArraySize(m_years); i++)
+      y = MathMax(y, m_years[i]);
+   return(y);
+  }
+
+bool CNewsFilter::InWindow(const datetime t) const
+  {
+   if(!m_loaded)
+      return(false);
+   for(int i = 0; i < ArraySize(m_times); i++)
+      if(MathAbs((long)(t - m_times[i])) <= m_window_sec)
+         return(true);
+   return(false);
+  }
+
+bool CNewsFilter::NextEvent(const datetime t, string &name, datetime &when) const
+  {
+   bool found = false;
+   if(!m_loaded)
+      return(false);
+   for(int i = 0; i < ArraySize(m_times); i++)
+     {
+      if(m_times[i] < t)
+         continue;
+      if(!found || m_times[i] < when)
+        {
+         found = true;
+         when  = m_times[i];
+         name  = m_events[i];
+        }
+     }
+   return(found);
   }
 
 //+------------------------------------------------------------------+

@@ -16,6 +16,7 @@
 #include <SmartEA/Core/SignalBase.mqh>
 #include <SmartEA/Core/RiskManager.mqh>
 #include <SmartEA/Core/TradeManager.mqh>
+#include <SmartEA/Core/Telemetry.mqh>
 #include <SmartEA/Signals/EMACrossSignal.mqh>
 #include <SmartEA/Signals/HolidayFilter.mqh>
 #include <SmartEA/Signals/NewsFilter.mqh>
@@ -57,6 +58,15 @@ input bool            InpNoReverse        = false;     // V2c: cross สวน =
 input int             InpReentryBars      = 4;         // V2c: ห้ามเปิดไม้ใหม่จนผ่านกี่แท่งหลังปิดด้วย cross สวน
 input bool            InpUseOppositeExit  = true;      // V2d: false = ไม่ปิดเมื่อ cross สวน (ปิดด้วย SL/TP/time exit)
 
+//--- Telemetry สำหรับ dashboard (docs/specs/dashboard-v1.md) — read-only, ปิดเองใน tester
+input bool            InpTelemetry        = true;      // เขียนไฟล์ให้ dashboard ที่ MQL5/Files/SmartEA/telemetry (ปิดเองใน tester)
+input ENUM_TIMEFRAMES InpTelFastTF        = PERIOD_M15; // ATR "ระยะสั้น" + แท่งที่ใช้หากรอบเอเชีย
+input ENUM_TIMEFRAMES InpTelSlowTF        = PERIOD_D1; // ATR รายวัน
+input int             InpTelAsianStartH   = 1;         // กรอบเอเชีย เริ่ม (server hour)
+input int             InpTelAsianEndH     = 10;        // กรอบเอเชีย จบ (server hour)
+
+#define EA_VERSION "1.00"   // ต้องตรงกับ #property version
+
 CLogger        g_log;
 CBarClock      g_clock;
 CRiskManager   g_risk;
@@ -64,6 +74,7 @@ CTradeManager  g_trade;
 CSignalBase   *g_signal = NULL;
 CHolidayFilter g_holiday;
 CNewsFilter    g_news;
+CTelemetry     g_tel;
 datetime       g_noreverse_bar = 0;   // V2c: เวลาเปิดแท่งที่ปิดไม้ด้วย cross สวน (0 = ไม่มีการพัก)
 CEMACrossSignal *g_ema  = NULL;     // ตัวเดียวกับ g_signal (ไว้เรียก RawCross / TimeExitDue)
 
@@ -170,6 +181,17 @@ int OnInit()
                            InpUseHTFFilter ? "ON" : "off", InpUseNewsFilter ? "ON" : "off",
                            InpNoReverse ? "ON" : "off", InpReentryBars, InpUseOppositeExit ? "on" : "OFF"));
    g_clock.Init(_Symbol, _Period);
+
+   //--- telemetry ไม่เคยทำให้ init ล้ม (Init คืน true เสมอ) — ปิดอัตโนมัติใน tester
+   g_tel.Init(&g_log, _Symbol, InpMagic, InpTelemetry, InpTelFastTF, InpTelSlowTF, InpATRPeriod,
+              InpTelAsianStartH, InpTelAsianEndH);
+   g_trade.SetTelemetry(&g_tel);
+   if(g_tel.Enabled())
+     {
+      EventSetTimer(30);
+      OnTimer();                  // เขียน status.json ทันที ไม่ต้องรอ 30 วินาทีแรก
+     }
+
    g_log.Info(StringFormat("init OK: signal=%s tf=%s", g_signal.Name(), EnumToString(_Period)));
    return(INIT_SUCCEEDED);
   }
@@ -177,6 +199,8 @@ int OnInit()
 //+------------------------------------------------------------------+
 void OnDeinit(const int reason)
   {
+   EventKillTimer();
+   g_tel.Deinit();
    if(g_signal != NULL)
      {
       g_signal.Deinit();      // Signal ที่มี indicator ต้อง IndicatorRelease ใน Deinit
@@ -234,6 +258,48 @@ double OnTester()
   }
 
 void OpenWithRetry(const SSignalIntent &intent);
+
+//+------------------------------------------------------------------+
+//| Telemetry (dashboard) — ทุกอย่างอ่านอย่างเดียว                      |
+//+------------------------------------------------------------------+
+//--- S1/S7: ตอนนี้เปิดไม้ใหม่ได้ตามช่วงเวลาหรือไม่ (ไม่รวม holiday/news/risk)
+bool SessionOpenNow()
+  {
+   MqlDateTime t;
+   TimeToStruct(TimeTradeServer(), t);
+   if(t.hour < InpSessionStartHour || t.hour >= InpSessionEndHour)
+      return(false);
+   if(t.day_of_week == 5 && t.hour >= InpFridayCutoffHour)
+      return(false);
+   return(t.day_of_week >= 1 && t.day_of_week <= 5);
+  }
+
+void OnTimer()
+  {
+   STelemetryExtra x;
+   x.Reset();
+   const datetime now = TimeTradeServer();
+   x.version                = EA_VERSION;
+   x.strategy               = (g_signal != NULL) ? g_signal.Name() : "";
+   x.halted                 = g_risk.IsHalted();
+   x.day_start_balance      = g_risk.DayStartBalance();
+   x.breaker_limit          = x.day_start_balance * (1.0 - InpDailyLossPct / 100.0);   // สูตรเดียวกับ RiskManager (อ่านอย่างเดียว)
+   x.spread_max             = InpMaxSpreadPoints;
+   x.commission_per_lot     = InpCommissionPerLot;
+   x.session_open           = SessionOpenNow();
+   x.holiday_today          = g_holiday.IsHoliday(now);
+   x.holidays_covered_until = g_holiday.CoveredUntilYear();
+   x.news_known             = g_news.NextEvent(now, x.news_event, x.news_time);
+   x.news_window_active     = g_news.InWindow(now);
+   x.news_covered_until     = g_news.CoveredUntilYear();
+   g_tel.OnTimer(x);
+  }
+
+void OnTradeTransaction(const MqlTradeTransaction &trans, const MqlTradeRequest &request, const MqlTradeResult &result)
+  {
+   if(trans.type == TRADE_TRANSACTION_DEAL_ADD)
+      g_tel.OnDealAdded(trans.deal);
+  }
 
 //+------------------------------------------------------------------+
 //| ทิศของ position ที่ EA นี้ถืออยู่ (magic+symbol) — NONE = ไม่มี      |
@@ -414,8 +480,11 @@ void OpenWithRetry(const SSignalIntent &intent)
         {
          double risk_money = 0.0, risk_pct = 0.0;
          if(g_risk.ActualRisk(intent.dir, lot, g_trade.LastFillPrice(), g_trade.LastSl(), risk_money, risk_pct))
+           {
             g_log.Trade("RISK", StringFormat("actual_risk=%.2f (%.3f%% ของ equity) lot=%.2f fill=%.5f sl=%.5f",
                                              risk_money, risk_pct, lot, g_trade.LastFillPrice(), g_trade.LastSl()));
+            g_tel.NoteOpen(g_trade.LastDeal(), AccountInfoDouble(ACCOUNT_EQUITY) * InpRiskPct / 100.0, risk_money);
+           }
          else
             g_log.Warn("คำนวณ actual_risk หลัง fill ไม่ได้");
          return;

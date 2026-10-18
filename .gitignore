@@ -19,3 +19,8 @@ data/files/_invalid/
 
 # queue runner logs
 data/logs/
+
+# telemetry (ข้อมูลบัญชีจาก EA บน demo/live ไม่ขึ้น git)
+data/files/telemetry/*.csv
+data/files/telemetry/*.json
+data/files/telemetry/*.tmp
