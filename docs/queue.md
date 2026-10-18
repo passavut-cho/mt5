@@ -202,7 +202,7 @@ depends: —
 goal: อ่าน docs/strategy/v3-directions.md + สรุปท้าย docs/strategy/experiments.md แล้วตอบ N1–N3
 
 ## T-029 · P3 · ขยาย holidays.csv + news.csv ย้อนหลัง 2010–2022
-status: DONE HASHPLACEHOLDER (news +417 / holidays +152 แถว 2010–2022 — ดู docs/research/news-calendar.md)
+status: DONE 0d6665d (news +417 / holidays +152 แถว 2010–2022 — ดู docs/research/news-calendar.md)
 needs: none
 depends: —
 goal: เติมแถวปี 2010–2022 ใน data/files/holidays.csv (US/CME holiday + early close ที่กระทบ COMEX gold) และ data/files/news.csv (NFP, CPI 08:30 ET = 15:30 server / FOMC statement ใช้ **เวลาประกาศจริงของแต่ละครั้ง** แปลงเป็น server = ET+7 — ระวังปี 2011–2012 บางนัดประกาศ 12:30 ET หรือ 14:15 ET ไม่ใช่ 14:00 — รวม FOMC นัดพิเศษ เช่น 2020-03-03, 2020-03-15 ถ้ามีเวลาประกาศชัด) จากแหล่งทางการ (BLS release archives, federalreserve.gov FOMC historical) ด้วย WebSearch/WebFetch • ใส่ verified ตามแหล่ง • อัปเดต `# covered_years:` ทั้ง 2 ไฟล์ • **ห้ามเดา — ปีไหนหาแหล่งทางการไม่ได้ให้ไม่ใส่ปีนั้นใน covered_years** แล้วรายงาน • บันทึกแหล่งใน docs/research/news-calendar.md • push พร้อม hash
