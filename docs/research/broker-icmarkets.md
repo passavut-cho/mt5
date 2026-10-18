@@ -38,7 +38,7 @@
 | Filling | IOC only | CTrade.SetTypeFillingBySymbol จัดการแล้ว |
 | Swap long / short | −57.03 / +39.77 points ต่อ lot ต่อคืน | ≈ −$57 / +$40 ต่อ lot ต่อคืน (พุธ ×3) — ต้องนับใน spec ถ้าถือข้ามคืน |
 | Margin ต่อ lot | ~$839 | ที่ราคาประมาณ 4,195 |
-| M1 history แรกบน server | 1998-04-22 | แท่ง M1 ลึกพอ — tick history จริงยังไม่รู้ (ดูตอน Phase 3) |
+| M1 history แรกบน server | 1998-04-22 | ⚠️ **แค่วันที่แท่งแรก** — M1 เต็มจริงเริ่ม **2017** (2016 รายชั่วโมง, ก่อนนั้นแทบว่าง) • real ticks เริ่ม 2026-04 (T-021, T-030) |
 | Spread (แท่ง M1 7 วัน, 6,883 แท่ง) | avg 7.3 • median 6 • p95 11 • max 40 points | = $0.07 / $0.06 / $0.11 / $0.40 |
 | Spread ตอนรัน | 50 points | รันช่วงตลาดเพิ่งเปิด/rollover — spread กว้างผิดปกติ |
 

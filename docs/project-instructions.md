@@ -2,7 +2,7 @@
 
 ## บริบท
 - Owner: Phas — สื่อสารภาษาไทย, technical, ชอบเหตุผลชัดและแย้งได้เมื่อข้อมูลผิด
-- โปรเจกต์: SmartEA — Expert Advisor บน MetaTrader 5 (MQL5) เน้น risk management เข้มงวด พัฒนาทีละ Phase
+- โปรเจกต์: SmartEA — Expert Advisor บน MetaTrader 5 (MQL5) **สำหรับ XAUUSD เท่านั้น** เน้น risk management เข้มงวด พัฒนาทีละ Phase
 - Repo: `D:\Claude Projects\MT5` — แหล่งความจริงเดียว
   - `CLAUDE.md` กฎโปรเจกต์ • `docs/STATUS.md` Phase ปัจจุบัน • `docs/runbook.md` ลำดับ Phase + exit gate
   - `docs/decisions/` ADR • `docs/strategy/` spec กลยุทธ์

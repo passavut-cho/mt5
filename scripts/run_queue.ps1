@@ -41,9 +41,23 @@ for ($i = 1; $i -le $MaxTasks; $i++) {
         Out-File -FilePath $log -Encoding utf8
     $code = $LASTEXITCODE
 
-    $text = Get-Content $log -Raw
-    $m = [regex]::Matches($text, 'QUEUE: (T-\d+ (DONE|BLOCKED)[^"\\]*|NOTHING RUNNABLE)')
-    $last = if ($m.Count -gt 0) { $m[$m.Count - 1].Groups[1].Value } else { '(no QUEUE line)' }
+    # Read ONLY the final "result" event - the prompt echo also contains the word QUEUE:, so never regex the whole log
+    $resultObj = $null
+    foreach ($line in (Get-Content $log -Encoding UTF8)) {
+        if ($line -match '^\s*\{.*"type"\s*:\s*"result"') {
+            try { $resultObj = $line | ConvertFrom-Json } catch { }
+        }
+    }
+    if ($null -eq $resultObj) {
+        Write-Host "  no result event in log (claude crashed?) - exit $code. See $log" -ForegroundColor Red; break
+    }
+    if ($resultObj.is_error) {
+        Write-Host "  claude error (status $($resultObj.api_error_status)): $($resultObj.result)" -ForegroundColor Red
+        if ($resultObj.api_error_status -eq 429) { Write-Host "  Usage limit reached - wait for the reset time above, then run again." -ForegroundColor Yellow }
+        break
+    }
+    $m = [regex]::Matches([string]$resultObj.result, 'QUEUE: (T-\d+ (DONE|BLOCKED)[^\r\n]*|NOTHING RUNNABLE)')
+    $last = if ($m.Count -gt 0) { $m[$m.Count - 1].Groups[1].Value } else { '(no QUEUE line in final result)' }
     Write-Host "  result: $last  (exit $code)"
 
     if ($code -ne 0)                  { Write-Host "claude exited with $code - stop." -ForegroundColor Red; break }

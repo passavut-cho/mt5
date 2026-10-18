@@ -4,7 +4,7 @@ argument-hint: [T-NNN — ว่าง = task แรกที่ทำได้]
 ---
 ทำตาม "Queue runner" ใน CLAUDE.md:
 
-1. `git pull --rebase` แล้วอ่าน docs/STATUS.md และ docs/queue.md
+1. `git status` → ถ้ามีไฟล์ค้างที่ Cowork แก้ (CLAUDE.md, docs/**, scripts/**, .claude/**, tests/**, data/files/*.csv) ให้ commit แยกก่อนเป็น `[P<n>] docs: sync from Cowork` แล้ว push • **ไฟล์ที่ไม่รู้ที่มา (เช่น .agents/, .codex/, AGENTS.md) ห้ามแตะ ห้าม commit** • จากนั้น `git pull --rebase` แล้วอ่าน docs/STATUS.md และ docs/queue.md
 2. เลือก task: $ARGUMENTS — ถ้าว่าง เลือก task แรกที่ `status: READY` + ทุก depends เป็น DONE + needs ทำได้:
    - `needs: owner` → ข้ามเสมอ
    - `needs: risk-edit` → ข้ามถ้ารันแบบ headless (`-p`) หรือ Owner ไม่ได้นั่งอยู่

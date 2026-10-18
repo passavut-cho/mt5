@@ -1,7 +1,9 @@
 # Project: SmartEA — MT5 Expert Advisor Framework
 
 ## Mission
-พัฒนา EA บน MQL5 ที่มี risk management เข้มงวด ทดสอบครบทุกขั้น และไปได้ไกลสุดแค่ **demo account** — การขึ้น live เป็นการตัดสินใจของผู้ใช้เท่านั้น
+พัฒนา EA บน MQL5 **สำหรับ XAUUSD (ทอง) เท่านั้น** ที่มี risk management เข้มงวด ทดสอบครบทุกขั้น และไปได้ไกลสุดแค่ **demo account** — การขึ้น live เป็นการตัดสินใจของผู้ใช้เท่านั้น
+
+**Scope: XAUUSD only (Owner 2026-10-19)** — กลยุทธ์ การวิจัย ค่า default (spread 20 pts, session, holiday/news ของ US) และ dashboard ออกแบบสำหรับทองทั้งหมด • ห้ามเสนอ/ทดสอบ symbol อื่นโดยไม่ถาม Owner • EA ต้องปฏิเสธการรันบน symbol ที่ไม่ใช่ทอง (T-037)
 
 ## บริบท
 - Platform: MetaTrader 5 / MQL5 (OOP, syntax คล้าย C++)
