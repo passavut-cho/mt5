@@ -214,7 +214,7 @@ needs: mt5-closed
 depends: —
 goal: [แก้โดย Cowork 2026-10-19 หลังรอบ 1 BLOCKED 01ea07e: IC มี M1 จริงตั้งแต่ 2017 เท่านั้น; วัน 2019-02-01 แท่งใหญ่สุดคือ ISM 10:00 ET = 17:00 server ซึ่งสอดคล้องกับ ET+7] ใช้ TzCheck เดิมกับวัน NFP 6 วันที่ครอบทั้งช่วง US standard time และ DST: **2017-03-10 (ก่อนเปลี่ยน DST), 2017-07-07, 2018-12-07, 2019-06-07, 2020-08-07, 2022-02-04** • เกณฑ์ใหม่: แท่ง 15:30 server ต้องอยู่ใน **top-3 range ของวัน** ทุกวัน **และ** แท่งที่ใหญ่ที่สุดในช่วง 14:00–17:30 ต้องเป็น 15:30 หรือ 15:45 อย่างน้อย 5/6 วัน (ถ้าเวลาเลื่อน ±1 ชม. เฉพาะหน้าหนาวหรือหน้าร้อน = timezone ไม่ใช่ NY+7 → BLOCKED พร้อมตาราง) • อัปเดต docs/research/history-timezone.md • push พร้อม hash
 ## T-031 · P3 · Implement CSessionBreakoutSignal (S-A)
-status: READY [Cowork 2026-10-19: รอบก่อนหยุดกลางคันเพราะ session limit 429 — มีงานค้างไม่ commit: SessionBreakoutSignal.mqh, SmartEA.mq5 (แก้), sbo_a1..a4.set, sbo_research.ini; risk-guardian PASS แล้ว, qa-reviewer ยังไม่เสร็จ, ให้ compile + regression ซ้ำเพื่อยืนยัน → ทำต่อจากไฟล์เดิม อย่าเขียนใหม่ทั้งหมด: compile → regression → qa-reviewer → commit]
+status: DONE 78bfb6f
 needs: none
 depends: —
 goal: implement ตาม docs/strategy/spec-session-breakout.md เป็น Signal class ใหม่ + `InpStrategy` เลือก signal (default EMA_ADX = พฤติกรรมเดิม) • ห้ามแตะ RiskManager/Config • สร้าง tests/setfiles/sbo_a1..a4.set และ tests/tester-ini/sbo_research.ini (XAUUSD M15 **2018.01.01–2022.12.31**, Model=1, Leverage=1:500, Deposit=10000) • regression: InpStrategy=EMA_ADX + ema_v1.set ต้องได้ 426 ไม้ net −3,777.38 (ถ้า MT5 เปิดอยู่ให้ข้าม regression และบอกใน report ว่ายังไม่รัน) • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER • push พร้อม hash
@@ -274,3 +274,10 @@ needs: owner
 agent: claude
 depends: T-039
 goal: [ต้องรอ T-039 commit scripts/hooks/pre-commit เข้า git ก่อน — worktree checkout จาก git ถ้า hook ยังเป็นไฟล์ untracked worktree จะไม่มี hook = ไม่มีด่าน M2/M4] Owner รันใน PowerShell: `cd "D:\Claude Projects\MT5"; git worktree add "..\MT5-codex" -b codex/sandbox` → เปิด Codex ในโฟลเดอร์ `D:\Claude Projects\MT5-codex` • ทดสอบว่า Codex อ่าน AGENTS.md แล้วตอบได้ว่า lane ของตัวเองคืออะไร และ commit ลง main ใน worktree นั้นถูก hook บล็อก
+
+## T-041 · P3 · SBO: เก็บ state "ใช้สิทธิ์ breakout ของวันแล้ว" ให้รอด restart (ก่อนขึ้น demo)
+status: WAIT_OWNER
+needs: none
+depends: T-031
+goal: [เพิ่มโดย Code จาก qa-reviewer MAJOR ของ T-031] m_done_day ใน SessionBreakoutSignal.mqh อยู่ใน memory — restart/reattach กลางวันหลังไม้แรกปิดแล้วอาจเปิดไม้ที่ 2 ของวัน • แก้: ตอน Init/เมื่อ m_done_day==0 ตรวจ deal history วันนี้ (magic+symbol) แล้วตั้ง m_done_day • รวม MINOR: CopyRates n==0 → return false, log GetLastError, อัปเดต spec ให้ครบ input • ไม่กระทบ backtest (regression 426 ไม้) • Owner/Cowork จัดลำดับ
+
