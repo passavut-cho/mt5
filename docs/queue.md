@@ -273,7 +273,7 @@ status: WAIT_OWNER
 needs: owner
 agent: claude
 depends: T-039
-goal: [ต้องรอ T-039 commit scripts/hooks/pre-commit เข้า git ก่อน — worktree checkout จาก git ถ้า hook ยังเป็นไฟล์ untracked worktree จะไม่มี hook = ไม่มีด่าน M2/M4] Owner รันใน PowerShell: `cd "D:\Claude Projects\MT5"; git worktree add "..\MT5-codex" -b codex/sandbox` → เปิด Codex ในโฟลเดอร์ `D:\Claude Projects\MT5-codex` • ทดสอบว่า Codex อ่าน AGENTS.md แล้วตอบได้ว่า lane ของตัวเองคืออะไร และ commit ลง main ใน worktree นั้นถูก hook บล็อก
+goal: [Cowork 2026-10-19: T-039 DONE 076952a — hook + AGENTS.md อยู่ใน git แล้ว สร้าง worktree ได้ • ใช้ branch `codex/T-044` แทน codex/sandbox] Owner รันใน PowerShell: `cd "D:\Claude Projects\MT5"; git worktree add "..\MT5-codex" -b codex/sandbox` → เปิด Codex ในโฟลเดอร์ `D:\Claude Projects\MT5-codex` • ทดสอบว่า Codex อ่าน AGENTS.md แล้วตอบได้ว่า lane ของตัวเองคืออะไร และ commit ลง main ใน worktree นั้นถูก hook บล็อก
 
 ## T-041 · P3 · SBO: เก็บ state "ใช้สิทธิ์ breakout ของวันแล้ว" ให้รอด restart (ก่อนขึ้น demo)
 status: DONE (ยกเลิกโดย Cowork 2026-10-19: S-A ไม่ผ่าน bar ใน T-032 → ไม่ขึ้น demo; ถ้ารื้อ S-A กลับมาให้เปิด task ใหม่)
