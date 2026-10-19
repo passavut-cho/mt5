@@ -262,7 +262,7 @@ depends: —
 goal: T-034 คำนวณ breaker_limit ซ้ำใน Telemetry ด้วยสูตรเดียวกับ RiskManager → ถ้าวันหนึ่งสูตรใน RiskManager เปลี่ยน dashboard จะแสดงค่าผิดโดยไม่รู้ตัว • เพิ่ม getter **อ่านอย่างเดียว** `double BreakerLimit() const` ใน CRiskManager (ไม่เปลี่ยน logic/ค่าใดๆ) แล้วให้ Telemetry ใช้ getter นี้ • compile 0/0, risk-guardian PASS (ต้องยืนยันว่า diff ของ RiskManager มีแค่ getter), regression ema_v1 426 ไม้ • ทำใน session interactive (ไฟล์ risk ต้องให้ Owner กดอนุญาต)
 
 ## T-039 · Tooling · เปิดใช้ pre-commit hook + ทดสอบ (ADR 0003 M4)
-status: READY
+status: DONE 076952a
 needs: none
 agent: claude
 depends: —
