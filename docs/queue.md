@@ -220,7 +220,7 @@ depends: —
 goal: implement ตาม docs/strategy/spec-session-breakout.md เป็น Signal class ใหม่ + `InpStrategy` เลือก signal (default EMA_ADX = พฤติกรรมเดิม) • ห้ามแตะ RiskManager/Config • สร้าง tests/setfiles/sbo_a1..a4.set และ tests/tester-ini/sbo_research.ini (XAUUSD M15 **2018.01.01–2022.12.31**, Model=1, Leverage=1:500, Deposit=10000) • regression: InpStrategy=EMA_ADX + ema_v1.set ต้องได้ 426 ไม้ net −3,777.38 (ถ้า MT5 เปิดอยู่ให้ข้าม regression และบอกใน report ว่ายังไม่รัน) • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER • push พร้อม hash
 
 ## T-032 · P3 · Experiments A1–A4 บน research set 2018–2022
-status: DONE (A1–A4 ไม่ผ่าน pre-validation bar ทุกตัว — ดู docs/strategy/experiments.md)
+status: DONE f8626b0 (A1–A4 ไม่ผ่าน pre-validation bar ทุกตัว — ดู docs/strategy/experiments.md)
 needs: mt5-closed
 depends: T-029, T-030, T-031
 goal: รัน sbo_a1..a4.set บน sbo_research.ini → report_stats.py base + `--extra-cost-points 20` + **แยกรายปี และแยก long/short** • เติมแถว (ID A1–A4) ใน docs/strategy/experiments.md พร้อมตัดสินตาม pre-validation bar ใน spec ทุกข้อ (PF, stress PF, trades, DD, % ปีที่กำไร, long/short PF) • **ห้ามแตะ 2023–2026, ห้ามปรับพารามิเตอร์, ห้ามเพิ่ม variant** • push พร้อม hash
