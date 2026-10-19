@@ -214,7 +214,7 @@ needs: mt5-closed
 depends: —
 goal: [แก้โดย Cowork 2026-10-19 หลังรอบ 1 BLOCKED 01ea07e: IC มี M1 จริงตั้งแต่ 2017 เท่านั้น; วัน 2019-02-01 แท่งใหญ่สุดคือ ISM 10:00 ET = 17:00 server ซึ่งสอดคล้องกับ ET+7] ใช้ TzCheck เดิมกับวัน NFP 6 วันที่ครอบทั้งช่วง US standard time และ DST: **2017-03-10 (ก่อนเปลี่ยน DST), 2017-07-07, 2018-12-07, 2019-06-07, 2020-08-07, 2022-02-04** • เกณฑ์ใหม่: แท่ง 15:30 server ต้องอยู่ใน **top-3 range ของวัน** ทุกวัน **และ** แท่งที่ใหญ่ที่สุดในช่วง 14:00–17:30 ต้องเป็น 15:30 หรือ 15:45 อย่างน้อย 5/6 วัน (ถ้าเวลาเลื่อน ±1 ชม. เฉพาะหน้าหนาวหรือหน้าร้อน = timezone ไม่ใช่ NY+7 → BLOCKED พร้อมตาราง) • อัปเดต docs/research/history-timezone.md • push พร้อม hash
 ## T-031 · P3 · Implement CSessionBreakoutSignal (S-A)
-status: READY
+status: READY [Cowork 2026-10-19: รอบก่อนหยุดกลางคันเพราะ session limit 429 — มีงานค้างไม่ commit: SessionBreakoutSignal.mqh, SmartEA.mq5 (แก้), sbo_a1..a4.set, sbo_research.ini; risk-guardian PASS แล้ว, qa-reviewer ยังไม่เสร็จ, ให้ compile + regression ซ้ำเพื่อยืนยัน → ทำต่อจากไฟล์เดิม อย่าเขียนใหม่ทั้งหมด: compile → regression → qa-reviewer → commit]
 needs: none
 depends: —
 goal: implement ตาม docs/strategy/spec-session-breakout.md เป็น Signal class ใหม่ + `InpStrategy` เลือก signal (default EMA_ADX = พฤติกรรมเดิม) • ห้ามแตะ RiskManager/Config • สร้าง tests/setfiles/sbo_a1..a4.set และ tests/tester-ini/sbo_research.ini (XAUUSD M15 **2018.01.01–2022.12.31**, Model=1, Leverage=1:500, Deposit=10000) • regression: InpStrategy=EMA_ADX + ema_v1.set ต้องได้ 426 ไม้ net −3,777.38 (ถ้า MT5 เปิดอยู่ให้ข้าม regression และบอกใน report ว่ายังไม่รัน) • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER • push พร้อม hash
@@ -262,15 +262,15 @@ depends: —
 goal: T-034 คำนวณ breaker_limit ซ้ำใน Telemetry ด้วยสูตรเดียวกับ RiskManager → ถ้าวันหนึ่งสูตรใน RiskManager เปลี่ยน dashboard จะแสดงค่าผิดโดยไม่รู้ตัว • เพิ่ม getter **อ่านอย่างเดียว** `double BreakerLimit() const` ใน CRiskManager (ไม่เปลี่ยน logic/ค่าใดๆ) แล้วให้ Telemetry ใช้ getter นี้ • compile 0/0, risk-guardian PASS (ต้องยืนยันว่า diff ของ RiskManager มีแค่ getter), regression ema_v1 426 ไม้ • ทำใน session interactive (ไฟล์ risk ต้องให้ Owner กดอนุญาต)
 
 ## T-039 · Tooling · เปิดใช้ pre-commit hook + ทดสอบ (ADR 0003 M4)
-status: BLOCKED permission ถูกปฏิเสธ: git config core.hooksPath (Owner ต้องรันเองหรือ approve ใน session interactive)
+status: READY
 needs: none
 agent: claude
 depends: —
-goal: รัน `git config core.hooksPath scripts/hooks` ใน repo หลัก (Owner ต้องกดอนุญาต เพราะ settings deny การแก้ hooksPath → ทำใน session interactive หรือให้ Owner รันเองใน PowerShell) • ทดสอบ 3 กรณีบน branch ทดลองแล้วลบทิ้ง: (1) แก้ comment ใน RiskManager.mqh แล้ว commit ปกติ → ต้องถูกบล็อก (2) commit ไฟล์อื่น → ผ่าน (3) commit ไฟล์ทั่วไปไม่โดนผลกระทบ • ห้าม commit การแก้ RiskManager จากการทดสอบ (`git restore`) • commit scripts/hooks/pre-commit, AGENTS.md, .codex/AGENTS.migrated-backup.md, ADR 0003 (ห้าม commit .agents/ .codex/ ส่วนอื่นจนกว่า Owner บอก) • push พร้อม hash
+goal: [Cowork 2026-10-19: Owner ตั้ง hooksPath เองแล้ว — ห้ามรัน git config เอง] ตรวจด้วย `git config --get core.hooksPath` ต้องได้ `scripts/hooks` (ถ้าไม่ใช่ → BLOCKED) • ทดสอบ 3 กรณีบน branch ทดลองแล้วลบทิ้ง: (1) แก้ comment ใน RiskManager.mqh แล้ว commit ปกติ → ต้องถูกบล็อก (2) commit ไฟล์อื่น → ผ่าน (3) commit ไฟล์ทั่วไปไม่โดนผลกระทบ • ห้าม commit การแก้ RiskManager จากการทดสอบ (`git restore`) • commit scripts/hooks/pre-commit, AGENTS.md, .codex/AGENTS.migrated-backup.md, ADR 0003 (ห้าม commit .agents/ .codex/ ส่วนอื่นจนกว่า Owner บอก) • push พร้อม hash
 
 ## T-040 · Tooling · ตั้ง worktree ให้ Codex
 status: WAIT_OWNER
 needs: owner
 agent: claude
 depends: T-039
-goal: Owner รันใน PowerShell: `cd "D:\Claude Projects\MT5"; git worktree add "..\MT5-codex" -b codex/sandbox` → เปิด Codex ในโฟลเดอร์ `D:\Claude Projects\MT5-codex` • ทดสอบว่า Codex อ่าน AGENTS.md แล้วตอบได้ว่า lane ของตัวเองคืออะไร และ commit ลง main ใน worktree นั้นถูก hook บล็อก
+goal: [ต้องรอ T-039 commit scripts/hooks/pre-commit เข้า git ก่อน — worktree checkout จาก git ถ้า hook ยังเป็นไฟล์ untracked worktree จะไม่มี hook = ไม่มีด่าน M2/M4] Owner รันใน PowerShell: `cd "D:\Claude Projects\MT5"; git worktree add "..\MT5-codex" -b codex/sandbox` → เปิด Codex ในโฟลเดอร์ `D:\Claude Projects\MT5-codex` • ทดสอบว่า Codex อ่าน AGENTS.md แล้วตอบได้ว่า lane ของตัวเองคืออะไร และ commit ลง main ใน worktree นั้นถูก hook บล็อก
