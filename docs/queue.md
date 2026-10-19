@@ -226,10 +226,10 @@ depends: T-029, T-030, T-031
 goal: รัน sbo_a1..a4.set บน sbo_research.ini → report_stats.py base + `--extra-cost-points 20` + **แยกรายปี และแยก long/short** • เติมแถว (ID A1–A4) ใน docs/strategy/experiments.md พร้อมตัดสินตาม pre-validation bar ใน spec ทุกข้อ (PF, stress PF, trades, DD, % ปีที่กำไร, long/short PF) • **ห้ามแตะ 2023–2026, ห้ามปรับพารามิเตอร์, ห้ามเพิ่ม variant** • push พร้อม hash
 
 ## T-033 · P3 · Owner ตัดสิน S-B (O1–O3)
-status: WAIT_OWNER
+status: DONE (Owner อนุมัติ r2 O1–O5 2026-10-19)
 needs: owner
 depends: —
-goal: อ่าน docs/strategy/spec-donchian-h4.md แล้วตอบ O1–O3
+goal: อ่าน docs/strategy/spec-donchian-h4.md **DRAFT r2** แล้วอนุมัติ O1–O5 (r2: weekend ถือเฉพาะไม้ที่ล็อกกำไร, variants B1–B4 ทำกำไรเป็นระยะตามที่ Owner ขอ)
 
 ## T-034 · Tooling · Telemetry ใน EA (dashboard data)
 status: DONE c655103
@@ -276,8 +276,36 @@ depends: T-039
 goal: [ต้องรอ T-039 commit scripts/hooks/pre-commit เข้า git ก่อน — worktree checkout จาก git ถ้า hook ยังเป็นไฟล์ untracked worktree จะไม่มี hook = ไม่มีด่าน M2/M4] Owner รันใน PowerShell: `cd "D:\Claude Projects\MT5"; git worktree add "..\MT5-codex" -b codex/sandbox` → เปิด Codex ในโฟลเดอร์ `D:\Claude Projects\MT5-codex` • ทดสอบว่า Codex อ่าน AGENTS.md แล้วตอบได้ว่า lane ของตัวเองคืออะไร และ commit ลง main ใน worktree นั้นถูก hook บล็อก
 
 ## T-041 · P3 · SBO: เก็บ state "ใช้สิทธิ์ breakout ของวันแล้ว" ให้รอด restart (ก่อนขึ้น demo)
-status: WAIT_OWNER
+status: DONE (ยกเลิกโดย Cowork 2026-10-19: S-A ไม่ผ่าน bar ใน T-032 → ไม่ขึ้น demo; ถ้ารื้อ S-A กลับมาให้เปิด task ใหม่)
 needs: none
 depends: T-031
 goal: [เพิ่มโดย Code จาก qa-reviewer MAJOR ของ T-031] m_done_day ใน SessionBreakoutSignal.mqh อยู่ใน memory — restart/reattach กลางวันหลังไม้แรกปิดแล้วอาจเปิดไม้ที่ 2 ของวัน • แก้: ตอน Init/เมื่อ m_done_day==0 ตรวจ deal history วันนี้ (magic+symbol) แล้วตั้ง m_done_day • รวม MINOR: CopyRates n==0 → return false, log GetLastError, อัปเดต spec ให้ครบ input • ไม่กระทบ backtest (regression 426 ไม้) • Owner/Cowork จัดลำดับ
+
+## T-042 · P3 · วัด weekend gap ของ XAUUSD 2018–2022 (ข้อมูลประกอบ O2 ของ S-B)
+status: READY
+needs: mt5-closed
+agent: claude
+depends: —
+goal: วัดราคาอย่างเดียว ไม่ backtest กลยุทธ์ (ไม่นับเป็น look) • สร้าง script MQL5 (src/Scripts) หรือใช้ tester ดึงทุกสัปดาห์ 2018-01-01→2022-12-31: ราคาปิดสุดท้ายวันศุกร์, ราคาเปิดแรกวันจันทร์ (server time), ATR(14,H4) ณ แท่งสุดท้ายวันศุกร์ → data/research/weekend_gaps_2018_2022.csv • สรุปใน docs/research/weekend-gap.md: จำนวนสัปดาห์, percentile 50/90/95/99 และ max ของ |gap|/ATR, จำนวนสัปดาห์ที่ |gap| > 1×ATR และ > 2×ATR พร้อมวันที่ 5 อันดับแรก • ห้ามแก้ RiskManager/Config • compile 0/0 • push พร้อม hash
+
+## T-043 · P3 · Implement CDonchianSignal (S-B) + exit manager
+status: READY
+needs: none
+agent: claude
+depends: T-033
+goal: implement ตาม docs/strategy/spec-donchian-h4.md (APPROVED) เป็น Signal class ใหม่ + `InpStrategy=DONCHIAN_H4` (default ยังเป็น EMA_ADX) • exit logic: trailing Donchian 10 (SL เลื่อนได้ทางเดียว), partial close 50% + SL→breakeven, TP 3R, ศุกร์ 20:00 server ตามกฎ weekend โดยใช้ input `InpWeekendLockATR` (default 0), ไม่เปิดไม้ใหม่หลังศุกร์ 20:00, partial ที่ติด volume_min → ไม่ partial + log • input `InpExitMode` = B1..B4 • ทุก modify/partial ผ่าน CTradeManager (เพิ่ม method ถ้าไม่มี) พร้อม magic • ห้ามแตะ RiskManager/Config • สร้าง tests/setfiles/sbb_b1..b4.set + tests/tester-ini/sbb_research.ini (XAUUSD H4 2018.01.01–2022.12.31, Model=1, Leverage=1:500, Deposit=10000) • **ห้ามรัน backtest research set** (เป็นของ T-045) — smoke ได้เฉพาะ 2017.07–2017.12 เพื่อเช็คว่ามี partial/trailing/weekend เกิดจริงใน log • regression ema_v1 ต้องได้ 426 ไม้ net −3,777.38 • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER • push พร้อม hash
+
+## T-044 · Tooling · report_stats.py รองรับ partial close + swap/weekend
+status: READY
+needs: none
+agent: any
+depends: —
+goal: report_stats.py ต้องรวม deal ขาออกหลายตัวของ position เดียวเป็น 1 ไม้ (net/commission/swap รวม) • เพิ่มส่วน: swap รวมแยก long/short, จำนวนคืนที่ถือเฉลี่ย, ไม้ที่ถือข้ามสุดสัปดาห์ (จำนวน + net), ไม้ที่ขาดทุนเกิน 1R (gap) • unit test ด้วย fixture HTML เล็กๆ ที่มี partial (ไม่ใช้ MT5) • ผลของ report SmartEA_sbo_a2.htm ต้องเท่าเดิม (regression) • push พร้อม hash (codex: ส่ง PR)
+
+## T-045 · P3 · Experiments S-B B1–B4 บน research set 2018–2022
+status: READY
+needs: mt5-closed
+agent: claude
+depends: T-042, T-043, T-044
+goal: ตรวจก่อน: หัวข้อ "O2 final" ใน spec-donchian-h4.md ต้องมีตัวเลข `InpWeekendLockATR` แล้ว (ถ้ายังเป็น "รอ T-042" → BLOCKED) • ตั้งค่านั้นในทุก set • รัน sbb_b1..b4 ด้วย sbb_research.ini • report_stats.py (+ `--extra-cost-points 20`) • บันทึกใน experiments.md ตาราง + ตัดสินตาม bar ใน spec (รวม swap) ห้ามปรับพารามิเตอร์/เพิ่ม variant หลังเห็นผล • ไม่แตะ 2023–2026 • push พร้อม hash
 
