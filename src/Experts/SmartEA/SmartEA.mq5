@@ -128,6 +128,24 @@ bool CheckLiveGuard()
   }
 
 //+------------------------------------------------------------------+
+//| Scope guard (T-037): EA นี้ออกแบบสำหรับทอง (XAU/USD) เท่านั้น        |
+//| ตรวจจากสกุลเงินของ symbol ไม่ใช่ชื่อ → รองรับ suffix เช่น XAUUSD.m    |
+//+------------------------------------------------------------------+
+bool CheckSymbolScope()
+  {
+   const string base   = SymbolInfoString(_Symbol, SYMBOL_CURRENCY_BASE);
+   const string profit = SymbolInfoString(_Symbol, SYMBOL_CURRENCY_PROFIT);
+   if(base != "XAU" || profit != "USD")
+     {
+      g_log.Error(StringFormat("scope guard: BLOCKED - %s (base=%s profit=%s) ไม่ใช่ทอง XAU/USD; EA นี้รันได้เฉพาะ XAUUSD",
+                               _Symbol, base, profit));
+      return(false);
+     }
+   g_log.Info(StringFormat("scope guard: OK (%s = %s/%s)", _Symbol, base, profit));
+   return(true);
+  }
+
+//+------------------------------------------------------------------+
 //| ปล่อย signal (ใช้ตอน init ล้มเหลวและตอน deinit)                      |
 //+------------------------------------------------------------------+
 void ReleaseSignal()
@@ -209,6 +227,9 @@ int OnInit()
    g_log.Init("SmartEA", InpMagic, InpLogLevel);
 
    if(!CheckLiveGuard())
+      return(INIT_FAILED);
+
+   if(!CheckSymbolScope())
       return(INIT_FAILED);
 
    if(!g_risk.Init(_Symbol, InpMagic, &g_log, InpRiskPct, InpDailyLossPct, InpMaxPositions,

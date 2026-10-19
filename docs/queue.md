@@ -250,7 +250,7 @@ depends: T-034, T-035, T-006
 goal: Owner ลาก SmartEA (InpTelemetry=true) ลง chart XAUUSD บน IC demo ที่ balance 10,000 (T-006) → รัน scripts/run_dashboard.ps1 → ส่ง screenshot ให้ Cowork ตรวจว่าทุก panel มีข้อมูลและตัวเลขตรงกับ MT5
 
 ## T-037 · Scope · EA รันได้เฉพาะ XAUUSD
-status: READY
+status: DONE (hash ใส่ตอน commit)
 needs: none
 depends: —
 goal: Owner กำหนด scope XAUUSD only (2026-10-19) → ใน OnInit ของ SmartEA.mq5 ตรวจ `SYMBOL_CURRENCY_BASE == "XAU"` และ `SYMBOL_CURRENCY_PROFIT == "USD"` (รองรับชื่อมี suffix เช่น XAUUSD.m / GOLD) ถ้าไม่ใช่ → log Error แล้ว `return INIT_FAILED` • ห้าม hardcode ชื่อ symbol (กฎเหล็กข้อ 5 ยังใช้ `_Symbol`) • RiskSelfTest ชุด EURUSD ยังเก็บไว้ (ทดสอบสูตร ไม่ใช่การเทรด) • compile 0/0, qa-reviewer ไม่มี BLOCKER, ทดสอบ: tester บน EURUSD ต้องได้ INIT_FAILED พร้อมข้อความ, บน XAUUSD ต้อง init ปกติ (regression ema_v1 426 ไม้ ถ้า MT5 ปิดอยู่) • push พร้อม hash
