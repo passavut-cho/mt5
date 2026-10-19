@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Phas"
 #property version   "1.00"   // รูปแบบ x.yy; ใช้ git tag บอก phase แทน
-#property description "SmartEA — EMA 9/21 cross + ADX filter (spec v1)"
+#property description "SmartEA — Signal เลือกได้: EMA cross + ADX / Session Breakout"
 #property tester_file "SmartEA\\holidays.csv"   // ให้ Strategy Tester คัดลอกไฟล์วันหยุดไปด้วย (S9)
 #property tester_file "SmartEA\\news.csv"   // ข่าว NFP/CPI/FOMC สำหรับ V2b
 #property tester_indicator "SmartEA\\SmartEA_EMAPair.ex5"   // แสดงสี EMA ใน visual mode (display only)
@@ -18,8 +18,17 @@
 #include <SmartEA/Core/TradeManager.mqh>
 #include <SmartEA/Core/Telemetry.mqh>
 #include <SmartEA/Signals/EMACrossSignal.mqh>
+#include <SmartEA/Signals/SessionBreakoutSignal.mqh>
 #include <SmartEA/Signals/HolidayFilter.mqh>
 #include <SmartEA/Signals/NewsFilter.mqh>
+
+//--- เลือก Signal (ค่า default = EMA_ADX = พฤติกรรมเดิมทั้งหมด)
+enum ENUM_STRATEGY
+  {
+   STRATEGY_EMA_ADX           = 0,   // EMA cross + ADX (spec-ema-adx v1/v2)
+   STRATEGY_SESSION_BREAKOUT  = 1,   // ทะลุกรอบเอเชีย (spec-session-breakout)
+   STRATEGY_DONCHIAN          = 2    // Donchian H4 (ยังไม่ implement — init ล้มเหลว)
+  };
 
 //--- inputs
 input bool           InpAllowLive         = false;     // อนุญาตบัญชีจริง — ผู้ใช้เท่านั้นที่เปิดได้
@@ -31,6 +40,7 @@ input double         InpCommissionPerLot  = 7.0;       // commission round turn 
 input int            InpMaxSpreadPoints   = 20;        // spread สูงสุด (points) 0 = ไม่จำกัด • default 20 = XAUUSD (ADR 0002 D7) symbol อื่นตั้งใน .set
 input uint           InpDeviationPoints   = 20;        // slippage ที่ยอมรับ (points)
 input ENUM_LOG_LEVEL InpLogLevel          = LOG_INFO;  // ระดับ log (DEBUG ถูกปิดอัตโนมัติใน tester)
+input ENUM_STRATEGY  InpStrategy          = STRATEGY_EMA_ADX;  // เลือก Signal
 
 //--- Strategy: EMA cross + ADX (docs/strategy/spec-ema-adx.md)
 input int            InpFastEMA           = 9;         // EMA เร็ว
@@ -57,6 +67,17 @@ input int             InpNewsWindowMin    = 30;        // V2b: ±นาทีร
 input bool            InpNoReverse        = false;     // V2c: cross สวน = ปิดอย่างเดียว ไม่กลับฝั่ง + พักเข้าไม้
 input int             InpReentryBars      = 4;         // V2c: ห้ามเปิดไม้ใหม่จนผ่านกี่แท่งหลังปิดด้วย cross สวน
 input bool            InpUseOppositeExit  = true;      // V2d: false = ไม่ปิดเมื่อ cross สวน (ปิดด้วย SL/TP/time exit)
+
+//--- Strategy: Session Breakout (docs/strategy/spec-session-breakout.md) — ใช้เมื่อ InpStrategy = SESSION_BREAKOUT
+//--- (InpTPRMult / InpTimeExitHHMM / InpFridayCutoffHour ใช้ร่วมกับ EMA)
+input int              InpAsiaStartHour   = 1;          // กรอบเอเชีย เริ่ม (server hour, รวมแท่งที่เปิดชั่วโมงนี้)
+input int              InpAsiaEndHour     = 10;         // กรอบเอเชีย จบ (ก่อนชั่วโมงนี้) = เริ่มหา breakout
+input int              InpEntryEndHour    = 21;         // เข้าไม้ได้ก่อนชั่วโมงนี้ (เวลาที่ส่ง order)
+input double           InpMaxRangeATR     = 1.5;        // ข้ามวันที่กรอบกว้างกว่า ค่านี้ x ATR(รายวัน)[1]
+input ENUM_TIMEFRAMES  InpRangeATRTF      = PERIOD_D1;  // timeframe ของ ATR กรองกรอบ
+input int              InpRangeATRPeriod  = 14;         // period ของ ATR กรองกรอบ
+input ENUM_SBO_SL_MODE InpSLMode          = SBO_SL_OPPOSITE;  // SL: OPPOSITE = ขอบตรงข้ามกรอบ, MID = กลางกรอบ
+input bool             InpUseTP           = false;      // ตั้ง TP = SL x InpTPRMult (false = ถือถึง time exit)
 
 //--- Telemetry สำหรับ dashboard (docs/specs/dashboard-v1.md) — read-only, ปิดเองใน tester
 input bool            InpTelemetry        = true;      // เขียนไฟล์ให้ dashboard ที่ MQL5/Files/SmartEA/telemetry (ปิดเองใน tester)
@@ -107,6 +128,82 @@ bool CheckLiveGuard()
   }
 
 //+------------------------------------------------------------------+
+//| ปล่อย signal (ใช้ตอน init ล้มเหลวและตอน deinit)                      |
+//+------------------------------------------------------------------+
+void ReleaseSignal()
+  {
+   if(g_signal != NULL)
+     {
+      g_signal.Deinit();      // Signal ที่มี indicator ต้อง IndicatorRelease ใน Deinit
+      delete g_signal;
+     }
+   g_signal = NULL;
+   g_ema    = NULL;
+  }
+
+//+------------------------------------------------------------------+
+//| สร้าง + ตั้งค่า + Init signal ตาม InpStrategy                       |
+//| คืน INIT_SUCCEEDED หรือรหัสล้มเหลว (เคลียร์ signal ให้แล้ว)          |
+//+------------------------------------------------------------------+
+int CreateSignal()
+  {
+   if(InpStrategy == STRATEGY_EMA_ADX)
+     {
+      g_ema = new CEMACrossSignal();
+      if(g_ema == NULL)
+         return(INIT_FAILED);
+      g_signal = g_ema;
+      if(!g_ema.Configure(InpFastEMA, InpSlowEMA, InpADXPeriod, InpADXMin, InpATRPeriod, InpSLATRMult, InpTPRMult,
+                          InpSessionStartHour, InpSessionEndHour, InpTimeExitHHMM, InpFridayCutoffHour))
+        {
+         g_log.Error("strategy input ไม่ถูกต้อง");
+         ReleaseSignal();
+         return(INIT_PARAMETERS_INCORRECT);
+        }
+      if(!g_ema.ConfigureHTF(InpUseHTFFilter, InpHTFTimeframe, InpHTFEMA))
+        {
+         g_log.Error("HTF input ไม่ถูกต้อง");
+         ReleaseSignal();
+         return(INIT_PARAMETERS_INCORRECT);
+        }
+      if(InpReentryBars < 0)
+        {
+         g_log.Error("InpReentryBars ต้อง >= 0");
+         ReleaseSignal();
+         return(INIT_PARAMETERS_INCORRECT);
+        }
+     }
+   else if(InpStrategy == STRATEGY_SESSION_BREAKOUT)
+     {
+      CSessionBreakoutSignal *sbo = new CSessionBreakoutSignal();
+      if(sbo == NULL)
+         return(INIT_FAILED);
+      g_signal = sbo;
+      if(InpTimeExitHHMM < 0 || InpTimeExitHHMM / 100 > 23 || InpTimeExitHHMM % 100 > 59 ||
+         !sbo.Configure(InpAsiaStartHour, InpAsiaEndHour, InpEntryEndHour, InpMaxRangeATR, InpRangeATRTF,
+                        InpRangeATRPeriod, InpSLMode, InpUseTP, InpTPRMult, InpFridayCutoffHour))
+        {
+         g_log.Error("session breakout input ไม่ถูกต้อง");
+         ReleaseSignal();
+         return(INIT_PARAMETERS_INCORRECT);
+        }
+     }
+   else
+     {
+      g_log.Error(StringFormat("InpStrategy=%s ยังไม่ implement", EnumToString(InpStrategy)));
+      return(INIT_PARAMETERS_INCORRECT);
+     }
+
+   if(!g_signal.Init(_Symbol, _Period, &g_log))
+     {
+      g_log.Error("signal init ล้มเหลว");
+      ReleaseSignal();
+      return(INIT_FAILED);
+     }
+   return(INIT_SUCCEEDED);
+  }
+
+//+------------------------------------------------------------------+
 int OnInit()
   {
    g_log.Init("SmartEA", InpMagic, InpLogLevel);
@@ -121,59 +218,19 @@ int OnInit()
    if(!g_trade.Init(_Symbol, InpMagic, &g_log, InpDeviationPoints))
       return(INIT_FAILED);
 
-   g_ema = new CEMACrossSignal();
-   if(g_ema == NULL)
-      return(INIT_FAILED);
-   g_signal = g_ema;
-   if(!g_ema.Configure(InpFastEMA, InpSlowEMA, InpADXPeriod, InpADXMin, InpATRPeriod, InpSLATRMult, InpTPRMult,
-                       InpSessionStartHour, InpSessionEndHour, InpTimeExitHHMM, InpFridayCutoffHour))
-     {
-      g_log.Error("strategy input ไม่ถูกต้อง");
-      delete g_ema;
-      g_ema = NULL;
-      g_signal = NULL;
-      return(INIT_PARAMETERS_INCORRECT);
-     }
-   if(!g_ema.ConfigureHTF(InpUseHTFFilter, InpHTFTimeframe, InpHTFEMA))
-     {
-      g_log.Error("HTF input ไม่ถูกต้อง");
-      delete g_ema;
-      g_ema = NULL;
-      g_signal = NULL;
-      return(INIT_PARAMETERS_INCORRECT);
-     }
-   if(InpReentryBars < 0)
-     {
-      g_log.Error("InpReentryBars ต้อง >= 0");
-      delete g_ema;
-      g_ema = NULL;
-      g_signal = NULL;
-      return(INIT_PARAMETERS_INCORRECT);
-     }
-   if(!g_signal.Init(_Symbol, _Period, &g_log))
-     {
-      g_log.Error("signal init ล้มเหลว");
-      delete g_ema;
-      g_ema = NULL;
-      g_signal = NULL;
-      return(INIT_FAILED);
-     }
+   const int sig_rc = CreateSignal();
+   if(sig_rc != INIT_SUCCEEDED)
+      return(sig_rc);
 
    if(!g_holiday.Init(&g_log, InpHolidayFile, InpUseHolidayFilter))
      {
-      g_signal.Deinit();
-      delete g_ema;
-      g_ema = NULL;
-      g_signal = NULL;
+      ReleaseSignal();
       return(INIT_PARAMETERS_INCORRECT);
      }
 
    if(!g_news.Init(&g_log, InpNewsFile, InpUseNewsFilter, InpNewsWindowMin))
      {
-      g_signal.Deinit();
-      delete g_ema;
-      g_ema = NULL;
-      g_signal = NULL;
+      ReleaseSignal();
       return(INIT_PARAMETERS_INCORRECT);
      }
 
@@ -201,13 +258,7 @@ void OnDeinit(const int reason)
   {
    EventKillTimer();
    g_tel.Deinit();
-   if(g_signal != NULL)
-     {
-      g_signal.Deinit();      // Signal ที่มี indicator ต้อง IndicatorRelease ใน Deinit
-      delete g_signal;
-      g_signal = NULL;
-      g_ema = NULL;
-     }
+   ReleaseSignal();
    g_log.Info(StringFormat("deinit reason=%d", reason));
   }
 
@@ -267,7 +318,9 @@ bool SessionOpenNow()
   {
    MqlDateTime t;
    TimeToStruct(TimeTradeServer(), t);
-   if(t.hour < InpSessionStartHour || t.hour >= InpSessionEndHour)
+   const int start_h = (InpStrategy == STRATEGY_SESSION_BREAKOUT) ? InpAsiaEndHour : InpSessionStartHour;
+   const int end_h   = (InpStrategy == STRATEGY_SESSION_BREAKOUT) ? InpEntryEndHour : InpSessionEndHour;
+   if(t.hour < start_h || t.hour >= end_h)
       return(false);
    if(t.day_of_week == 5 && t.hour >= InpFridayCutoffHour)
       return(false);
@@ -342,6 +395,16 @@ bool HeldFromBeforeToday()
   }
 
 //+------------------------------------------------------------------+
+//| S6: ถึงเวลาปิดทุก position แล้วหรือยัง (server time) — ใช้ร่วมทุก strategy |
+//+------------------------------------------------------------------+
+bool TimeExitDue()
+  {
+   MqlDateTime t;
+   TimeToStruct(TimeTradeServer(), t);
+   return(t.hour * 100 + t.min >= InpTimeExitHHMM);
+  }
+
+//+------------------------------------------------------------------+
 //| S6: ปิดทุก position เมื่อถึงเวลา หรือเมื่อถือข้ามวันมา               |
 //| (ตรวจทุก tick เพราะมีเวลาตายตัว)                                    |
 //| ถ้าปิดไม่สำเร็จ ลองใหม่ได้ไม่เกินทุก 5 วินาที กัน log ท่วม            |
@@ -351,7 +414,7 @@ void CheckTimeExit()
    static datetime last_try = 0;
    if(HeldDirection() == SIGNAL_NONE)
       return;
-   const bool due   = g_ema.TimeExitDue();
+   const bool due   = TimeExitDue();
    const bool stale = !due && HeldFromBeforeToday();
    if(!due && !stale)
       return;
@@ -387,7 +450,7 @@ void OnTick()
    //--- S3: cross ฝั่งตรงข้ามกับ position ที่ถืออยู่ -> ปิด แล้วค่อยพิจารณาเข้าฝั่งใหม่ (ผ่าน filter + risk ปกติ)
    //--- V2d: InpUseOppositeExit=false -> ข้ามทั้งก้อน • V2c: InpNoReverse -> ปิดอย่างเดียว + พักเข้าไม้ InpReentryBars แท่ง
    const ENUM_SIGNAL_DIR held = HeldDirection();
-   if(InpUseOppositeExit && held != SIGNAL_NONE && g_ema.RawCross() == (ENUM_SIGNAL_DIR)(-(int)held))
+   if(g_ema != NULL && InpUseOppositeExit && held != SIGNAL_NONE && g_ema.RawCross() == (ENUM_SIGNAL_DIR)(-(int)held))
      {
       if(!g_trade.CloseAll("opposite cross (S3)"))
          return;                            // ปิดไม่สำเร็จ -> ไม่เปิดไม้ใหม่ (รอบหน้าลองใหม่)
@@ -404,7 +467,7 @@ void OnTick()
       return;
 
    //--- V2c: ยังอยู่ในช่วงพักหลังปิดด้วย cross สวน (ห้ามเปิดทุกทิศ)
-   if(InpNoReverse && g_noreverse_bar > 0)
+   if(g_ema != NULL && InpNoReverse && g_noreverse_bar > 0)
      {
       const int bars_since = iBarShift(_Symbol, _Period, g_noreverse_bar, false);
       if(bars_since >= 0 && bars_since < InpReentryBars)
