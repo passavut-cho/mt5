@@ -10,6 +10,7 @@ import argparse
 import html
 import re
 import sys
+from datetime import datetime, timedelta
 from collections import defaultdict
 
 
@@ -44,20 +45,61 @@ def parse_deals(text):
     return deals
 
 
+def parse_time(value):
+    """แปลงเวลาจากตาราง Deals ของ MT5 (เวลาของ server)"""
+    for fmt in ("%Y.%m.%d %H:%M:%S", "%Y.%m.%d %H:%M"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            pass
+    return datetime.strptime(value[:10], "%Y.%m.%d")
+
+
 def pair_trades(deals, comm_per_lot):
-    """จับคู่ in -> out (EA ถือได้ 1 position ต่อครั้ง) ; ไม้ที่ยังเปิดค้างจะไม่นับ"""
+    """รวม deal เข้า/ออกทั้งหมดของ position เดียว; position ค้างเมื่อจบ report ไม่นับ"""
     trades, cur = [], None
     for d in deals:
         if d["dir"] == "in":
-            cur = d
+            # EA เปิดได้ครั้งละ 1 position; รองรับ entry deal ที่ถูกแบ่งเป็นหลายส่วนด้วย
+            if cur is None:
+                cur = dict(open=d["time"], type=d["type"], vol=0.0, exit_vol=0.0,
+                           gross=0.0, swap=0.0, deal_comm=0.0, close=d["time"])
+            cur["vol"] += d["vol"]
+            cur["swap"] += d["swap"]
+            cur["deal_comm"] += d["comm"]
         elif d["dir"] == "out" and cur is not None:
-            comm = -comm_per_lot * cur["vol"]
-            gross = d["profit"]
-            net = gross + d["swap"] + cur["comm"] + d["comm"] + comm
-            trades.append(dict(open=cur["time"], close=d["time"], side="long" if cur["type"] == "buy" else "short",
-                               vol=cur["vol"], gross=gross, swap=d["swap"], comm=comm + cur["comm"] + d["comm"], net=net))
-            cur = None
+            cur["exit_vol"] += d["vol"]
+            cur["gross"] += d["profit"]
+            cur["swap"] += d["swap"]
+            cur["deal_comm"] += d["comm"]
+            cur["close"] = d["time"]
+            if cur["exit_vol"] + 1e-8 >= cur["vol"]:
+                comm = -comm_per_lot * cur["vol"]
+                net = cur["gross"] + cur["swap"] + cur["deal_comm"] + comm
+                trades.append(dict(open=cur["open"], close=cur["close"],
+                                   side="long" if cur["type"] == "buy" else "short",
+                                   vol=cur["vol"], gross=cur["gross"], swap=cur["swap"],
+                                   comm=comm + cur["deal_comm"], net=net))
+                cur = None
     return trades
+
+
+def nights_held(trade):
+    return max(0, (parse_time(trade["close"]).date() - parse_time(trade["open"]).date()).days)
+
+
+def crossed_weekend(trade):
+    """True เมื่อถือผ่านวันจันทร์ 00:00 server หลังวันศุกร์ 20:00"""
+    opened, closed = parse_time(trade["open"]), parse_time(trade["close"])
+    for offset in range(-7, 8):
+        day = opened.date() + timedelta(days=offset)
+        if day.weekday() != 4:
+            continue
+        cutoff = datetime.combine(day, datetime.min.time()).replace(hour=20)
+        monday = cutoff + timedelta(days=2, hours=4)
+        if opened < monday and closed >= monday:
+            return True
+    return False
 
 
 def stats(trades, deposit):
@@ -124,6 +166,18 @@ def build_md(path, trades, deposit, comm_per_lot, extra_points=0.0, contract_siz
         by_year[t["close"][:4]].append(t)
     for y in sorted(by_year):
         out.append(row(y, stats(by_year[y], deposit)))
+    out += ["", "## Swap และระยะเวลาถือ", "",
+            "| ฝั่ง | Swap รวม | คืนถือเฉลี่ย | ไม้ข้ามสุดสัปดาห์ | Net ไม้ข้ามสุดสัปดาห์ |",
+            "|---|---:|---:|---:|---:|"]
+    for side in ("long", "short"):
+        group = [t for t in trades if t["side"] == side]
+        weekends = [t for t in group if crossed_weekend(t)]
+        avg_nights = sum(nights_held(t) for t in group) / len(group) if group else 0.0
+        out.append(f"| {side} | {sum(t['swap'] for t in group):,.2f} | {avg_nights:.2f} | "
+                   f"{len(weekends)} | {sum(t['net'] for t in weekends):,.2f} |")
+    total_weekends = [t for t in trades if crossed_weekend(t)]
+    out += ["", f"- ถือข้ามสุดสัปดาห์รวม: {len(total_weekends)} ไม้, net {sum(t['net'] for t in total_weekends):,.2f}",
+            "- ขาดทุนเกิน 1R: คำนวณไม่ได้จาก Deals table เพียงอย่างเดียว เพราะ report ไม่มี initial SL/ระยะ 1R ของแต่ละ position"]
     if extra_points:
         out += build_stress_md(trades, apply_stress(trades, extra_points, contract_size, point), deposit, extra_points)
     return "\n".join(out) + "\n"
