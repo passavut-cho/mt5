@@ -296,7 +296,7 @@ depends: T-033
 goal: implement ตาม docs/strategy/spec-donchian-h4.md (APPROVED) เป็น Signal class ใหม่ + `InpStrategy=DONCHIAN_H4` (default ยังเป็น EMA_ADX) • exit logic: trailing Donchian 10 (SL เลื่อนได้ทางเดียว), partial close 50% + SL→breakeven, TP 3R, ศุกร์ 20:00 server ตามกฎ weekend โดยใช้ input `InpWeekendLockATR` (default 0), ไม่เปิดไม้ใหม่หลังศุกร์ 20:00, partial ที่ติด volume_min → ไม่ partial + log • input `InpExitMode` = B1..B4 • ทุก modify/partial ผ่าน CTradeManager (เพิ่ม method ถ้าไม่มี) พร้อม magic • ห้ามแตะ RiskManager/Config • สร้าง tests/setfiles/sbb_b1..b4.set + tests/tester-ini/sbb_research.ini (XAUUSD H4 2018.01.01–2022.12.31, Model=1, Leverage=1:500, Deposit=10000) • **ห้ามรัน backtest research set** (เป็นของ T-045) — smoke ได้เฉพาะ 2017.07–2017.12 เพื่อเช็คว่ามี partial/trailing/weekend เกิดจริงใน log • regression ema_v1 ต้องได้ 426 ไม้ net −3,777.38 • compile 0/0, risk-guardian PASS, qa-reviewer ไม่มี BLOCKER • push พร้อม hash
 
 ## T-044 · Tooling · report_stats.py รองรับ partial close + swap/weekend
-status: READY
+status: DONE f2dd224
 needs: none
 agent: codex
 depends: —
@@ -310,7 +310,7 @@ depends: T-042, T-043, T-046
 goal: ตรวจก่อน: หัวข้อ "O2 final" ใน spec-donchian-h4.md ต้องมีตัวเลข `InpWeekendLockATR` แล้ว (ถ้ายังเป็น "รอ T-042" → BLOCKED) • ตั้งค่านั้นในทุก set • รัน sbb_b1..b4 ด้วย sbb_research.ini • report_stats.py (+ `--extra-cost-points 20`) • ไม้ที่เสียเกิน 1R: report ไม่มี initial SL → ใช้ proxy = net ขาดทุนของ position (รวม partial/commission/swap) > 1.05% ของ balance ก่อนเปิดไม้ (lot คิดจาก risk 1%) แสดงรายไม้พร้อมวันที่และว่าข้ามสุดสัปดาห์หรือไม่ • บันทึกใน experiments.md ตาราง + ตัดสินตาม bar ใน spec (รวม swap) ห้ามปรับพารามิเตอร์/เพิ่ม variant หลังเห็นผล • ไม่แตะ 2023–2026 • push พร้อม hash
 
 ## T-046 · Tooling · Review + merge งาน Codex T-044
-status: READY (รอบ 2 — Cowork 2026-10-19: รอบ 1 BLOCKED 04226b4 crossed_weekend days=3 → Codex แก้ใน branch เดิม • ก่อนเริ่ม: `git fetch` แล้ว origin/codex/T-044 ต้องมี commit ใหม่หลัง 30aef85 ไม่งั้น BLOCKED "ยังไม่มี fix" • ทำ goal เดิมทั้งหมดรวม qa-reviewer) • หมายเหตุ: O2 final ใน spec = 0 แล้ว (90f79ef) T-045 ไม่ต้องรอ
+status: DONE f2dd224 (รอบ 2: test 4/4, regression sbo_a2 261.71/PF1.01 + ema_v1 −3,777.38, qa-reviewer ไม่มี BLOCKER)
 needs: none
 agent: claude
 depends: T-039
