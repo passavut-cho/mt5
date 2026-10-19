@@ -38,6 +38,12 @@ class ReportStatsTests(unittest.TestCase):
         deals = self.deals[:1]
         self.assertEqual(report_stats.pair_trades(deals, 7.0), [])
 
+    def test_weekend_boundary_is_monday_midnight_server(self):
+        trade = {"open": "2024.01.05 18:00:00", "close": "2024.01.08 00:00:00"}
+        self.assertTrue(report_stats.crossed_weekend(trade))
+        trade["close"] = "2024.01.07 23:59:59"
+        self.assertFalse(report_stats.crossed_weekend(trade))
+
 
 if __name__ == "__main__":
     unittest.main()

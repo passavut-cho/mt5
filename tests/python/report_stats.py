@@ -96,7 +96,7 @@ def crossed_weekend(trade):
         if day.weekday() != 4:
             continue
         cutoff = datetime.combine(day, datetime.min.time()).replace(hour=20)
-        monday = cutoff + timedelta(days=3, hours=4)
+        monday = cutoff + timedelta(days=2, hours=4)
         if opened < monday and closed >= monday:
             return True
     return False
