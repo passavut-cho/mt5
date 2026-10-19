@@ -316,3 +316,30 @@ agent: claude
 depends: T-039
 goal: [Owner เปลี่ยนเป็น READY เมื่อ Codex แจ้งว่า push branch แล้ว] `git fetch` → ตรวจ `git diff main...origin/codex/T-044 --stat` ต้องแตะเฉพาะ tests/python/** (และ docs ของ tool ถ้ามี) — ถ้าแตะ src/**, RiskManager, Config, queue.md, STATUS.md → BLOCKED • อ่าน diff ทั้งหมด • รัน unit test ของ T-044 + regression `SmartEA_sbo_a2.htm` ต้องได้ net 261.71 PF 1.01 เท่าเดิม • qa-reviewer ไม่มี BLOCKER • `git merge --no-ff origin/codex/T-044` → push main • ตั้ง T-044 = `DONE <merge hash>` และ T-046 = DONE • ไม่ต้องลบ branch remote (Owner ลบเอง)
 
+## T-047 · P3 · Owner อนุมัติ screener-v1 (R1)
+status: DONE (Owner อนุมัติ SC1–SC6 2026-10-19)
+needs: owner
+depends: —
+goal: อ่าน docs/specs/screener-v1.md (SC1–SC6) + docs/strategy/screen-list-v1.md แล้วตอบ "ตามที่เสนอ" หรือแก้ • Cowork เปลี่ยน status spec + list เป็น APPROVED/LOCKED และปลด T-048–T-050
+
+## T-048 · P3 · Export M15 XAUUSD 2017-07 → 2022-12 สำหรับ screener
+status: READY
+needs: mt5-closed
+agent: claude
+depends: T-047
+goal: script MQL5 (src/Scripts) หรือ startup ini ดึง M15 bid OHLC + spread + tick_volume, server time → data/research/xauusd_m15_2017-07_2022-12.csv • **ต้องปฏิเสธ/ตัดข้อมูลหลัง 2022-12-31 23:59** • เขียน docs/research/screener-data.md: จำนวนแท่ง, ช่วงวันที่จริง, แท่งที่ spread=0, ช่องว่างข้อมูล > 1 วันทำการ, sha256 ของ csv • ตรวจ gitignore ไม่ commit csv • compile 0/0 • push พร้อม hash
+
+## T-049 · P3 · Screener engine + calibration (Codex)
+status: READY (Codex เริ่มได้เลย ไม่ต้องรอ T-048)
+needs: none
+agent: codex
+depends: T-047
+goal: Codex ทำใน worktree branch `codex/T-049` ตาม docs/specs/screener-v1.md SC1–SC3, SC5 • unit test fill model ครบ (SL/TP แท่งเดียว → SL, gap ข้าม SL fill ที่ open, ask = bid+spread, swap พุธ ×3, ห้ามเข้า 00:00–01:00) • implement S-A A2 และ S-B B2 ใน engine เป็น calibration target + script `python -m research.screener --calibrate` ที่พิมพ์ตารางเทียบกับ experiments.md • implement H1–H8 ตาม screen-list-v1 (LOCKED) ตรงตัวอักษร • **Codex ไม่มี Python และไม่มีไฟล์ข้อมูล (csv gitignored อยู่ในโฟลเดอร์หลัก)** → ไม่ต้องรัน: เขียน unit test ด้วย fixture สังเคราะห์เล็กๆ ใน tests/ ให้ Claude รันใน T-050 • engine รับ `--data <path>` (default `data/research/xauusd_m15_2017-07_2022-12.csv`) • push branch แล้วแจ้ง Owner
+
+## T-050 · P3 · Review/merge screener + รัน screen-list-v1 ครั้งเดียว
+status: WAIT_OWNER
+needs: none
+agent: claude
+depends: T-048, T-049
+goal: [Cowork/Owner เปลี่ยนเป็น READY เมื่อ Codex push codex/T-049] review + merge codex/T-049 ตามกติกา T-046 (แตะเฉพาะ research/**, docs/research/**, tests) • รัน unit test ของ Codex (ล้ม = BLOCKED ส่งกลับ Codex) • รัน `--calibrate` → เขียน docs/research/screener-calibration.md • calibration ต้องผ่านตาม Pipeline ข้อ 3 ของ spec ไม่งั้น BLOCKED (ห้ามแก้ engine เอง) • ผ่านแล้วรัน screen-list-v1 ครั้งเดียว → docs/strategy/screen-results-v1.md ตารางทุก variant + ตัดสินตาม screen bar SC4 • ห้ามปรับพารามิเตอร์/รันซ้ำด้วยค่าอื่น • push พร้อม hash
+
