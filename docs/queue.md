@@ -303,7 +303,7 @@ depends: —
 goal: report_stats.py ต้องรวม deal ขาออกหลายตัวของ position เดียวเป็น 1 ไม้ (net/commission/swap รวม) • เพิ่มส่วน: swap รวมแยก long/short, จำนวนคืนที่ถือเฉลี่ย, ไม้ที่ถือข้ามสุดสัปดาห์ (จำนวน + net), ไม้ที่ขาดทุนเกิน 1R (gap) • unit test ด้วย fixture HTML เล็กๆ ที่มี partial (ไม่ใช้ MT5) • ผลของ report SmartEA_sbo_a2.htm ต้องเท่าเดิม (regression) • Codex: ทำใน `D:\Claude Projects\MT5-codex` branch `codex/T-044` → commit + `git push -u origin codex/T-044` (ห้ามแตะ main) แล้วแจ้ง Owner
 
 ## T-045 · P3 · Experiments S-B B1–B4 บน research set 2018–2022
-status: READY
+status: DONE __H__ (B1–B4 ไม่ผ่าน bar ทุกตัว: PF 0.88–1.02, long PF<1 ทุกตัว — ดู docs/strategy/experiments.md)
 needs: mt5-closed
 agent: claude
 depends: T-042, T-043, T-046
