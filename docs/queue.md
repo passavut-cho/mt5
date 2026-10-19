@@ -269,7 +269,7 @@ depends: —
 goal: [Cowork 2026-10-19: Owner ตั้ง hooksPath เองแล้ว — ห้ามรัน git config เอง] ตรวจด้วย `git config --get core.hooksPath` ต้องได้ `scripts/hooks` (ถ้าไม่ใช่ → BLOCKED) • ทดสอบ 3 กรณีบน branch ทดลองแล้วลบทิ้ง: (1) แก้ comment ใน RiskManager.mqh แล้ว commit ปกติ → ต้องถูกบล็อก (2) commit ไฟล์อื่น → ผ่าน (3) commit ไฟล์ทั่วไปไม่โดนผลกระทบ • ห้าม commit การแก้ RiskManager จากการทดสอบ (`git restore`) • commit scripts/hooks/pre-commit, AGENTS.md, .codex/AGENTS.migrated-backup.md, ADR 0003 (ห้าม commit .agents/ .codex/ ส่วนอื่นจนกว่า Owner บอก) • push พร้อม hash
 
 ## T-040 · Tooling · ตั้ง worktree ให้ Codex
-status: WAIT_OWNER
+status: DONE (Cowork 2026-10-19: worktree MT5-codex @ codex/T-044 ใช้งานจริงแล้ว — Codex ทำ T-044 ใน lane ถูกต้อง, ปฏิเสธการแตะ RiskManager ตาม AGENTS.md (ถูกต้อง); M4 ทดสอบแล้วใน T-039; M2 ไม่จำเป็นต้องทดสอบเพราะ git ไม่ยอม checkout main ใน worktree ที่สองอยู่แล้ว)
 needs: owner
 agent: claude
 depends: T-039
@@ -307,10 +307,10 @@ status: READY
 needs: mt5-closed
 agent: claude
 depends: T-042, T-043, T-046
-goal: ตรวจก่อน: หัวข้อ "O2 final" ใน spec-donchian-h4.md ต้องมีตัวเลข `InpWeekendLockATR` แล้ว (ถ้ายังเป็น "รอ T-042" → BLOCKED) • ตั้งค่านั้นในทุก set • รัน sbb_b1..b4 ด้วย sbb_research.ini • report_stats.py (+ `--extra-cost-points 20`) • บันทึกใน experiments.md ตาราง + ตัดสินตาม bar ใน spec (รวม swap) ห้ามปรับพารามิเตอร์/เพิ่ม variant หลังเห็นผล • ไม่แตะ 2023–2026 • push พร้อม hash
+goal: ตรวจก่อน: หัวข้อ "O2 final" ใน spec-donchian-h4.md ต้องมีตัวเลข `InpWeekendLockATR` แล้ว (ถ้ายังเป็น "รอ T-042" → BLOCKED) • ตั้งค่านั้นในทุก set • รัน sbb_b1..b4 ด้วย sbb_research.ini • report_stats.py (+ `--extra-cost-points 20`) • ไม้ที่เสียเกิน 1R: report ไม่มี initial SL → ใช้ proxy = net ขาดทุนของ position (รวม partial/commission/swap) > 1.05% ของ balance ก่อนเปิดไม้ (lot คิดจาก risk 1%) แสดงรายไม้พร้อมวันที่และว่าข้ามสุดสัปดาห์หรือไม่ • บันทึกใน experiments.md ตาราง + ตัดสินตาม bar ใน spec (รวม swap) ห้ามปรับพารามิเตอร์/เพิ่ม variant หลังเห็นผล • ไม่แตะ 2023–2026 • push พร้อม hash
 
 ## T-046 · Tooling · Review + merge งาน Codex T-044
-status: WAIT_OWNER
+status: READY (Cowork 2026-10-19: origin/codex/T-044 = 30aef85 แตะ 3 ไฟล์ใน tests/python/)
 needs: none
 agent: claude
 depends: T-039
