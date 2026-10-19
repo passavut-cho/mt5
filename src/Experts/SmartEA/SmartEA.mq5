@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Phas"
 #property version   "1.00"   // รูปแบบ x.yy; ใช้ git tag บอก phase แทน
-#property description "SmartEA — Signal เลือกได้: EMA cross + ADX / Session Breakout"
+#property description "SmartEA — Signal เลือกได้: EMA cross + ADX / Session Breakout / Donchian H4"
 #property tester_file "SmartEA\\holidays.csv"   // ให้ Strategy Tester คัดลอกไฟล์วันหยุดไปด้วย (S9)
 #property tester_file "SmartEA\\news.csv"   // ข่าว NFP/CPI/FOMC สำหรับ V2b
 #property tester_indicator "SmartEA\\SmartEA_EMAPair.ex5"   // แสดงสี EMA ใน visual mode (display only)
@@ -17,8 +17,10 @@
 #include <SmartEA/Core/RiskManager.mqh>
 #include <SmartEA/Core/TradeManager.mqh>
 #include <SmartEA/Core/Telemetry.mqh>
+#include <SmartEA/Core/ExitManager.mqh>
 #include <SmartEA/Signals/EMACrossSignal.mqh>
 #include <SmartEA/Signals/SessionBreakoutSignal.mqh>
+#include <SmartEA/Signals/DonchianSignal.mqh>
 #include <SmartEA/Signals/HolidayFilter.mqh>
 #include <SmartEA/Signals/NewsFilter.mqh>
 
@@ -27,7 +29,7 @@ enum ENUM_STRATEGY
   {
    STRATEGY_EMA_ADX           = 0,   // EMA cross + ADX (spec-ema-adx v1/v2)
    STRATEGY_SESSION_BREAKOUT  = 1,   // ทะลุกรอบเอเชีย (spec-session-breakout)
-   STRATEGY_DONCHIAN          = 2    // Donchian H4 (ยังไม่ implement — init ล้มเหลว)
+   STRATEGY_DONCHIAN          = 2    // Donchian breakout H4 + exit manager (spec-donchian-h4)
   };
 
 //--- inputs
@@ -79,6 +81,18 @@ input int              InpRangeATRPeriod  = 14;         // period ของ ATR 
 input ENUM_SBO_SL_MODE InpSLMode          = SBO_SL_OPPOSITE;  // SL: OPPOSITE = ขอบตรงข้ามกรอบ, MID = กลางกรอบ
 input bool             InpUseTP           = false;      // ตั้ง TP = SL x InpTPRMult (false = ถือถึง time exit)
 
+//--- Strategy: Donchian H4 (docs/strategy/spec-donchian-h4.md) — ใช้เมื่อ InpStrategy = DONCHIAN
+//--- (InpATRPeriod / InpFridayCutoffHour ใช้ร่วม • ไม่ใช้ InpTimeExitHHMM — S-B ถือข้ามคืนได้ • chart ต้องเป็น H4)
+input int                InpDonchianEntryBars = 20;     // เข้าเมื่อแท่งปิดทะลุ high/low ของกี่แท่งก่อนหน้า
+input int                InpDonchianExitBars  = 10;     // trailing SL ตามขอบของกี่แท่งที่ปิดแล้ว
+input double             InpDonchianSLATR     = 2.0;    // SL เริ่มต้น = ATR x ค่านี้ (= 1R)
+input ENUM_SBB_EXIT_MODE InpExitMode          = SBB_EXIT_B1;  // B1 trailing • B2 partial +1R • B3 partial +2R • B4 TP 3R
+input double             InpPartialR1         = 1.0;    // B2: partial เมื่อกำไรถึง R เท่านี้
+input double             InpPartialR2         = 2.0;    // B3: partial เมื่อกำไรถึง R เท่านี้
+input double             InpPartialPct        = 50.0;   // B2/B3: % ของ volume ที่ปิด (floor ตาม volume_step)
+input double             InpDonchianTPR       = 3.0;    // B4: TP = SL x ค่านี้ (ส่งพร้อม order)
+input double             InpWeekendLockATR    = 0.0;    // ศุกร์ถือข้ามสุดสัปดาห์เมื่อ SL ล็อกกำไร >= ค่านี้ x ATR (0 = ขอแค่ breakeven)
+
 //--- Telemetry สำหรับ dashboard (docs/specs/dashboard-v1.md) — read-only, ปิดเองใน tester
 input bool            InpTelemetry        = true;      // เขียนไฟล์ให้ dashboard ที่ MQL5/Files/SmartEA/telemetry (ปิดเองใน tester)
 input ENUM_TIMEFRAMES InpTelFastTF        = PERIOD_M15; // ATR "ระยะสั้น" + แท่งที่ใช้หากรอบเอเชีย
@@ -93,6 +107,9 @@ CBarClock      g_clock;
 CRiskManager   g_risk;
 CTradeManager  g_trade;
 CSignalBase   *g_signal = NULL;
+CExitManager   g_exit;
+SExitContext   g_exit_ctx;
+CDonchianSignal *g_donchian = NULL;   // ตัวเดียวกับ g_signal เมื่อ InpStrategy = DONCHIAN (ไว้อ่านขอบ trailing / ATR)
 CHolidayFilter g_holiday;
 CNewsFilter    g_news;
 CTelemetry     g_tel;
@@ -155,8 +172,9 @@ void ReleaseSignal()
       g_signal.Deinit();      // Signal ที่มี indicator ต้อง IndicatorRelease ใน Deinit
       delete g_signal;
      }
-   g_signal = NULL;
-   g_ema    = NULL;
+   g_signal   = NULL;
+   g_ema      = NULL;
+   g_donchian = NULL;
   }
 
 //+------------------------------------------------------------------+
@@ -206,9 +224,32 @@ int CreateSignal()
          return(INIT_PARAMETERS_INCORRECT);
         }
      }
+   else if(InpStrategy == STRATEGY_DONCHIAN)
+     {
+      g_donchian = new CDonchianSignal();
+      if(g_donchian == NULL)
+         return(INIT_FAILED);
+      g_signal = g_donchian;
+      //--- B4 เท่านั้นที่ส่ง TP พร้อม order (tp_r > 0); variant อื่น TP = 0
+      const double tp_r = (InpExitMode == SBB_EXIT_B4) ? InpDonchianTPR : 0.0;
+      if(InpMaxPositions != 1)   // S-B ห้ามซ้อนไม้ทิศเดียวกัน (กฎเหล็กข้อ 3) — ExitManager ออกแบบสำหรับ 1 position
+        {
+         g_log.Error("S-B ต้องใช้ InpMaxPositions=1");
+         ReleaseSignal();
+         return(INIT_PARAMETERS_INCORRECT);
+        }
+      if(!g_donchian.Configure(InpDonchianEntryBars, InpDonchianExitBars, InpATRPeriod, InpDonchianSLATR, tp_r,
+                               InpFridayCutoffHour) ||
+         (InpExitMode == SBB_EXIT_B4 && InpDonchianTPR <= 0.0))
+        {
+         g_log.Error("donchian input ไม่ถูกต้อง");
+         ReleaseSignal();
+         return(INIT_PARAMETERS_INCORRECT);
+        }
+     }
    else
      {
-      g_log.Error(StringFormat("InpStrategy=%s ยังไม่ implement", EnumToString(InpStrategy)));
+      g_log.Error(StringFormat("InpStrategy=%s ไม่รู้จัก", EnumToString(InpStrategy)));
       return(INIT_PARAMETERS_INCORRECT);
      }
 
@@ -219,6 +260,17 @@ int CreateSignal()
       return(INIT_FAILED);
      }
    return(INIT_SUCCEEDED);
+  }
+
+//+------------------------------------------------------------------+
+//| S-B: อ่านขอบ trailing + ATR จากแท่งที่ปิดแล้ว (เรียกตอนแท่งใหม่/Init)   |
+//+------------------------------------------------------------------+
+void RefreshExitLevels()
+  {
+   if(g_donchian == NULL)
+      return;
+   g_exit_ctx.trail_ok = g_donchian.TrailLevels(g_exit_ctx.trail_lo, g_exit_ctx.trail_hi);
+   g_exit_ctx.atr_ok   = g_donchian.Atr(g_exit_ctx.atr);
   }
 
 //+------------------------------------------------------------------+
@@ -255,6 +307,19 @@ int OnInit()
       return(INIT_PARAMETERS_INCORRECT);
      }
 
+   if(InpStrategy == STRATEGY_DONCHIAN)
+     {
+      const double partial_r = (InpExitMode == SBB_EXIT_B2) ? InpPartialR1 : ((InpExitMode == SBB_EXIT_B3) ? InpPartialR2 : 0.0);
+      if(!g_exit.Init(_Symbol, InpMagic, &g_log, &g_trade, partial_r, InpPartialPct, InpWeekendLockATR, InpFridayCutoffHour))
+        {
+         ReleaseSignal();
+         return(INIT_PARAMETERS_INCORRECT);
+        }
+      g_exit_ctx.Reset();
+      RefreshExitLevels();
+      g_log.Info(StringFormat("S-B exit mode=%s", EnumToString(InpExitMode)));
+     }
+
    g_log.Info(StringFormat("v2 flags: HTF=%s news=%s noReverse=%s(reentry %d) oppositeExit=%s",
                            InpUseHTFFilter ? "ON" : "off", InpUseNewsFilter ? "ON" : "off",
                            InpNoReverse ? "ON" : "off", InpReentryBars, InpUseOppositeExit ? "on" : "OFF"));
@@ -279,6 +344,8 @@ void OnDeinit(const int reason)
   {
    EventKillTimer();
    g_tel.Deinit();
+   if(InpStrategy == STRATEGY_DONCHIAN)
+      g_exit.LogSummary();
    ReleaseSignal();
    g_log.Info(StringFormat("deinit reason=%d", reason));
   }
@@ -339,6 +406,8 @@ bool SessionOpenNow()
   {
    MqlDateTime t;
    TimeToStruct(TimeTradeServer(), t);
+   if(InpStrategy == STRATEGY_DONCHIAN)   // S-B ไม่มี session — เปิดได้ทั้งวัน ยกเว้นศุกร์หลัง cutoff
+      return(t.day_of_week >= 1 && t.day_of_week <= 5 && !(t.day_of_week == 5 && t.hour >= InpFridayCutoffHour));
    const int start_h = (InpStrategy == STRATEGY_SESSION_BREAKOUT) ? InpAsiaEndHour : InpSessionStartHour;
    const int end_h   = (InpStrategy == STRATEGY_SESSION_BREAKOUT) ? InpEntryEndHour : InpSessionEndHour;
    if(t.hour < start_h || t.hour >= end_h)
@@ -452,9 +521,22 @@ void CheckTimeExit()
 //+------------------------------------------------------------------+
 void OnTick()
   {
-   CheckTimeExit();
+   //--- S6 time exit เป็นของ strategy intraday (EMA/SBO) — S-B ถือข้ามคืนตาม spec จึงไม่ใช้
+   if(InpStrategy != STRATEGY_DONCHIAN)
+      CheckTimeExit();
 
-   if(!g_clock.IsNewBar())
+   const bool new_bar = g_clock.IsNewBar();
+
+   //--- S-B: partial / trailing / weekend ของไม้ที่ถืออยู่ (ลด risk เท่านั้น) — ทำก่อนหาสัญญาณใหม่
+   if(InpStrategy == STRATEGY_DONCHIAN)
+     {
+      g_exit_ctx.new_bar = new_bar;
+      if(new_bar)
+         RefreshExitLevels();
+      g_exit.Manage(g_exit_ctx);
+     }
+
+   if(!new_bar)
       return;
 
    string why;
@@ -571,6 +653,8 @@ void OpenWithRetry(const SSignalIntent &intent)
            }
          else
             g_log.Warn("คำนวณ actual_risk หลัง fill ไม่ได้");
+         if(InpStrategy == STRATEGY_DONCHIAN)   // 1R = ระยะ fill -> SL ที่ส่งจริง (ใช้ตัดสิน partial)
+            g_exit.NoteOpen(g_trade.LastDeal(), MathAbs(g_trade.LastFillPrice() - g_trade.LastSl()));
          return;
         }
       if(!retryable)

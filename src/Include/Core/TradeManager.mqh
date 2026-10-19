@@ -27,6 +27,7 @@ private:
    bool      ValidateStops(const ENUM_SIGNAL_DIR dir, const double sl, const double tp, string &why) const;
    bool      IsRetryable(const uint retcode) const;
    bool      IsSuccess(const uint retcode) const;
+   bool      CloseOne(const ulong ticket, const string why);   // ปิด position 1 ตัว (ใช้ร่วม CloseAll / CloseTicket)
 
 public:
              CTradeManager() : m_symbol(""), m_magic(0), m_log(NULL), m_ready(false), m_last_fill(0), m_last_sl(0), m_last_deal(0), m_tel(NULL) {}
@@ -44,6 +45,13 @@ public:
    void      SetTelemetry(CTelemetry *tel) { m_tel = tel; }
    bool      CloseAll(const string why);
    int       CountPositions() const;      // กรอง magic + symbol
+
+   //--- จัดการ position ที่เปิดอยู่ (S-B exit manager) — ทุกตัวกรอง magic+symbol ของ EA นี้
+   //--- ModifySl: เลื่อน SL ได้ "ทางเดียว" (ลด risk เท่านั้น) — SL ใหม่ไม่ดีกว่าเดิมหรือผิด stops level จะไม่ส่ง
+   bool      ModifySl(const ulong ticket, const double new_sl, const string why);
+   //--- ClosePartial: ปิดบางส่วน volume ต้อง >= volume_min และส่วนที่เหลือ >= volume_min (ผู้เรียก normalize ตาม step แล้ว)
+   bool      ClosePartial(const ulong ticket, const double volume, const string why);
+   bool      CloseTicket(const ulong ticket, const string why) { return(CloseOne(ticket, why)); }
   };
 
 //+------------------------------------------------------------------+
@@ -234,6 +242,42 @@ int CTradeManager::CountPositions() const
   }
 
 //+------------------------------------------------------------------+
+//| ปิด position 1 ตัวตาม ticket (ต้องเป็น magic+symbol ของ EA นี้)         |
+//+------------------------------------------------------------------+
+bool CTradeManager::CloseOne(const ulong ticket, const string why)
+  {
+   if(!m_ready || !PositionSelectByTicket(ticket))
+      return(false);
+   if(PositionGetString(POSITION_SYMBOL) != m_symbol || (ulong)PositionGetInteger(POSITION_MAGIC) != m_magic)
+      return(false);
+
+   //--- telemetry: ราคาที่ "ขอ" ตอนปิด long = bid, short = ask (ต้องอ่านก่อนปิด)
+   const ulong pid = (ulong)PositionGetInteger(POSITION_IDENTIFIER);
+   const bool  was_buy = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY);
+   const double vol = PositionGetDouble(POSITION_VOLUME);
+   MqlTick pre;
+   const bool pre_ok = (m_tel != NULL && m_tel.Enabled() && SymbolInfoTick(m_symbol, pre));
+   if(m_tel != NULL)
+      m_tel.NoteClose(pid, why);
+   const ulong t0 = GetMicrosecondCount();
+   bool ok = m_trade.PositionClose(ticket);
+   const double latency_ms = (double)(GetMicrosecondCount() - t0) / 1000.0;
+   uint rc = m_trade.ResultRetcode();
+   if(pre_ok)
+      m_tel.OnOrder("close", was_buy ? ORDER_TYPE_SELL : ORDER_TYPE_BUY, vol, was_buy ? pre.bid : pre.ask,
+                    (ok && IsSuccess(rc)) ? m_trade.ResultPrice() : 0.0,
+                    MathRound((pre.ask - pre.bid) / SymbolInfoDouble(m_symbol, SYMBOL_POINT)), latency_ms, rc, why);
+   if(ok && IsSuccess(rc))
+     {
+      m_log.Trade("CLOSE", StringFormat("ticket=%I64u price=%.5f : %s", ticket, m_trade.ResultPrice(), why));
+      return(true);
+     }
+   m_log.Error(StringFormat("CLOSE ticket=%I64u ล้มเหลว retcode=%u (%s)", ticket, rc,
+                            m_trade.ResultRetcodeDescription()));
+   return(false);
+  }
+
+//+------------------------------------------------------------------+
 bool CTradeManager::CloseAll(const string why)
   {
    if(!m_ready)
@@ -247,33 +291,86 @@ bool CTradeManager::CloseAll(const string why)
          continue;
       if(PositionGetString(POSITION_SYMBOL) != m_symbol || (ulong)PositionGetInteger(POSITION_MAGIC) != m_magic)
          continue;
-
-      //--- telemetry: ราคาที่ "ขอ" ตอนปิด long = bid, short = ask (ต้องอ่านก่อนปิด)
-      const ulong pid = (ulong)PositionGetInteger(POSITION_IDENTIFIER);
-      const bool  was_buy = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY);
-      const double vol = PositionGetDouble(POSITION_VOLUME);
-      MqlTick pre;
-      const bool pre_ok = (m_tel != NULL && m_tel.Enabled() && SymbolInfoTick(m_symbol, pre));
-      if(m_tel != NULL)
-         m_tel.NoteClose(pid, why);
-      const ulong t0 = GetMicrosecondCount();
-      bool ok = m_trade.PositionClose(ticket);
-      const double latency_ms = (double)(GetMicrosecondCount() - t0) / 1000.0;
-      uint rc = m_trade.ResultRetcode();
-      if(pre_ok)
-         m_tel.OnOrder("close", was_buy ? ORDER_TYPE_SELL : ORDER_TYPE_BUY, vol, was_buy ? pre.bid : pre.ask,
-                       (ok && IsSuccess(rc)) ? m_trade.ResultPrice() : 0.0,
-                       MathRound((pre.ask - pre.bid) / SymbolInfoDouble(m_symbol, SYMBOL_POINT)), latency_ms, rc, why);
-      if(ok && IsSuccess(rc))
-         m_log.Trade("CLOSE", StringFormat("ticket=%I64u price=%.5f : %s", ticket, m_trade.ResultPrice(), why));
-      else
-        {
+      if(!CloseOne(ticket, why))
          all_ok = false;
-         m_log.Error(StringFormat("CLOSE ticket=%I64u ล้มเหลว retcode=%u (%s)", ticket, rc,
-                                  m_trade.ResultRetcodeDescription()));
-        }
      }
    return(all_ok);
+  }
+
+//+------------------------------------------------------------------+
+bool CTradeManager::ModifySl(const ulong ticket, const double new_sl, const string why)
+  {
+   if(!m_ready || !PositionSelectByTicket(ticket))
+      return(false);
+   if(PositionGetString(POSITION_SYMBOL) != m_symbol || (ulong)PositionGetInteger(POSITION_MAGIC) != m_magic)
+      return(false);
+
+   const bool   buy    = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY);
+   const ENUM_SIGNAL_DIR dir = buy ? SIGNAL_BUY : SIGNAL_SELL;
+   const double cur_sl = PositionGetDouble(POSITION_SL);
+   const double tp     = PositionGetDouble(POSITION_TP);
+   const double sl     = NormalizeSlPrice(m_symbol, dir, new_sl);   // ปัดเข้าหาราคา = ไม่เสี่ยงเพิ่ม
+
+   //--- เลื่อนทางเดียว: BUY ต้องสูงขึ้น, SELL ต้องต่ำลง
+   const bool improves = (cur_sl <= 0.0) || (buy ? sl > cur_sl : sl < cur_sl);
+   if(!improves)
+      return(false);
+
+   string why_bad;
+   if(!ValidateStops(dir, sl, 0.0, why_bad))   // ตรวจเฉพาะ SL (TP เดิมไม่ถูกแตะ)
+     {
+      m_log.Trade("SKIP", StringFormat("MODIFY ticket=%I64u sl=%.5f : %s", ticket, sl, why_bad));
+      return(false);
+     }
+
+   bool ok = m_trade.PositionModify(ticket, sl, tp);
+   uint rc = m_trade.ResultRetcode();
+   if(ok && IsSuccess(rc))
+     {
+      m_log.Trade("MODIFY", StringFormat("ticket=%I64u sl %.5f -> %.5f : %s", ticket, cur_sl, sl, why));
+      return(true);
+     }
+   m_log.Warn(StringFormat("MODIFY ticket=%I64u sl=%.5f ล้มเหลว retcode=%u (%s)", ticket, sl, rc,
+                           m_trade.ResultRetcodeDescription()));
+   return(false);
+  }
+
+//+------------------------------------------------------------------+
+bool CTradeManager::ClosePartial(const ulong ticket, const double volume, const string why)
+  {
+   if(!m_ready || !PositionSelectByTicket(ticket))
+      return(false);
+   if(PositionGetString(POSITION_SYMBOL) != m_symbol || (ulong)PositionGetInteger(POSITION_MAGIC) != m_magic)
+      return(false);
+
+   const double vmin = SymbolInfoDouble(m_symbol, SYMBOL_VOLUME_MIN);
+   const double pos  = PositionGetDouble(POSITION_VOLUME);
+   const double eps  = 1e-9;
+   if(volume < vmin - eps || pos - volume < vmin - eps)
+     {
+      m_log.Trade("REJECT", StringFormat("PARTIAL ticket=%I64u vol=%.2f จาก %.2f : ต่ำกว่า volume_min %.2f", ticket, volume, pos, vmin));
+      return(false);
+     }
+
+   const bool was_buy = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY);
+   MqlTick pre;
+   const bool pre_ok = (m_tel != NULL && m_tel.Enabled() && SymbolInfoTick(m_symbol, pre));
+   const ulong t0 = GetMicrosecondCount();
+   bool ok = m_trade.PositionClosePartial(ticket, volume);
+   const double latency_ms = (double)(GetMicrosecondCount() - t0) / 1000.0;
+   uint rc = m_trade.ResultRetcode();
+   if(pre_ok)
+      m_tel.OnOrder("close", was_buy ? ORDER_TYPE_SELL : ORDER_TYPE_BUY, volume, was_buy ? pre.bid : pre.ask,
+                    (ok && IsSuccess(rc)) ? m_trade.ResultPrice() : 0.0,
+                    MathRound((pre.ask - pre.bid) / SymbolInfoDouble(m_symbol, SYMBOL_POINT)), latency_ms, rc, why);
+   if(ok && IsSuccess(rc))
+     {
+      m_log.Trade("PARTIAL", StringFormat("ticket=%I64u vol=%.2f/%.2f price=%.5f : %s", ticket, volume, pos,
+                                          m_trade.ResultPrice(), why));
+      return(true);
+     }
+   m_log.Error(StringFormat("PARTIAL ticket=%I64u ล้มเหลว retcode=%u (%s)", ticket, rc, m_trade.ResultRetcodeDescription()));
+   return(false);
   }
 
 #endif
