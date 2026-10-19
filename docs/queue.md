@@ -289,7 +289,7 @@ depends: —
 goal: วัดราคาอย่างเดียว ไม่ backtest กลยุทธ์ (ไม่นับเป็น look) • สร้าง script MQL5 (src/Scripts) หรือใช้ tester ดึงทุกสัปดาห์ 2018-01-01→2022-12-31: ราคาปิดสุดท้ายวันศุกร์, ราคาเปิดแรกวันจันทร์ (server time), ATR(14,H4) ณ แท่งสุดท้ายวันศุกร์ → data/research/weekend_gaps_2018_2022.csv • สรุปใน docs/research/weekend-gap.md: จำนวนสัปดาห์, percentile 50/90/95/99 และ max ของ |gap|/ATR, จำนวนสัปดาห์ที่ |gap| > 1×ATR และ > 2×ATR พร้อมวันที่ 5 อันดับแรก • ห้ามแก้ RiskManager/Config • compile 0/0 • push พร้อม hash
 
 ## T-043 · P3 · Implement CDonchianSignal (S-B) + exit manager
-status: READY
+status: DONE a3761d7 (compile 0/0, risk PASS, qa no BLOCKER, regression 426 ไม้, smoke partial/trail/weekend เกิดจริง)
 needs: none
 agent: claude
 depends: T-033
