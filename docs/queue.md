@@ -310,7 +310,7 @@ depends: T-042, T-043, T-046
 goal: ตรวจก่อน: หัวข้อ "O2 final" ใน spec-donchian-h4.md ต้องมีตัวเลข `InpWeekendLockATR` แล้ว (ถ้ายังเป็น "รอ T-042" → BLOCKED) • ตั้งค่านั้นในทุก set • รัน sbb_b1..b4 ด้วย sbb_research.ini • report_stats.py (+ `--extra-cost-points 20`) • ไม้ที่เสียเกิน 1R: report ไม่มี initial SL → ใช้ proxy = net ขาดทุนของ position (รวม partial/commission/swap) > 1.05% ของ balance ก่อนเปิดไม้ (lot คิดจาก risk 1%) แสดงรายไม้พร้อมวันที่และว่าข้ามสุดสัปดาห์หรือไม่ • บันทึกใน experiments.md ตาราง + ตัดสินตาม bar ใน spec (รวม swap) ห้ามปรับพารามิเตอร์/เพิ่ม variant หลังเห็นผล • ไม่แตะ 2023–2026 • push พร้อม hash
 
 ## T-046 · Tooling · Review + merge งาน Codex T-044
-status: READY (Cowork 2026-10-19: origin/codex/T-044 = 30aef85 แตะ 3 ไฟล์ใน tests/python/)
+status: BLOCKED review พบบั๊ก crossed_weekend() ใน origin/codex/T-044 (30aef85): monday = cutoff+3d4h ควรเป็น 2d4h → unit test test_swap_nights_and_weekend_summary ล้มเหลว; ไม่ merge
 needs: none
 agent: claude
 depends: T-039
