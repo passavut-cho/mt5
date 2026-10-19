@@ -24,3 +24,6 @@ data/logs/
 data/files/telemetry/*.csv
 data/files/telemetry/*.json
 data/files/telemetry/*.tmp
+
+# dashboard output
+data/dashboard/
