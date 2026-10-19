@@ -63,7 +63,7 @@ depends: T-004
 goal: สร้าง src/Include/Signals/EMACrossSignal.mqh (CEMACrossSignal : CSignalBase รวม ADX+DI filter และ ATR SL ตาม spec ข้อ 2–4) และต่อเข้า SmartEA.mq5 ด้วย input ตาม spec ข้อ 7 รวม session S1, opposite-cross exit/reverse S3, SL<2×spread ไม่เข้า S4, time exit 23:30 S6, Friday cutoff S7 — ห้ามแตะ src/Include/Core/RiskManager.mqh และ Config/; ถ้าต้องแก้ Core ส่วนอื่นให้บันทึกเหตุผลใน ADR 0003 ก่อน. สร้าง tests/setfiles/ema_v1.set (InpMaxSpreadPoints=20) + tests/tester-ini/ema_v1.ini (XAUUSD M15 2023.01.01-2024.12.31, Model=1, Leverage=1:500, Deposit=10000). จบเมื่อ transcript แสดง compile.ps1 PASS 0/0, risk-guardian VERDICT: PASS, qa-reviewer ไม่มี BLOCKER, STATUS.md อัปเดต, git push สำเร็จพร้อม hash
 
 ## T-008 · P2 · Backtest ema_v1 in-sample + วิเคราะห์
-status: BLOCKED ไม่ผ่านเกณฑ์ spec ข้อ 9: 5 ไม้ข้าม 23:30, PF 0.85, DD 38% (ดู data/reports/SmartEA_ema_v1.summary.md)
+status: DONE (ปิดโดย Cowork 2026-10-19: EMA v1 ไม่ผ่านและเลิกใช้แล้ว — เดิม: BLOCKED ไม่ผ่านเกณฑ์ spec ข้อ 9: 5 ไม้ข้าม 23:30, PF 0.85, DD 38% (ดู data/reports/SmartEA_ema_v1.summary.md))
 needs: mt5-closed
 depends: T-007
 goal: รัน scripts/run_backtest.ps1 -Ini ema_v1 ได้ report ใน data/reports/; backtest-analyst สรุปลง data/reports/SmartEA_ema_v1.summary.md ตาม spec ข้อ 9 (จำนวนไม้ ≥ 100?, ไม่มีไม้นอก session, ไม่มีไม้ข้าม 23:30, ทุกไม้มี SL) พร้อม metric ครบ; ห้ามปรับพารามิเตอร์เพื่อให้ผลดีขึ้น — ถ้าไม่ผ่านเกณฑ์ให้ BLOCKED แล้วรายงาน
@@ -330,16 +330,16 @@ depends: T-047
 goal: script MQL5 (src/Scripts) หรือ startup ini ดึง M15 bid OHLC + spread + tick_volume, server time → data/research/xauusd_m15_2017-07_2022-12.csv • **ต้องปฏิเสธ/ตัดข้อมูลหลัง 2022-12-31 23:59** • เขียน docs/research/screener-data.md: จำนวนแท่ง, ช่วงวันที่จริง, แท่งที่ spread=0, ช่องว่างข้อมูล > 1 วันทำการ, sha256 ของ csv • ตรวจ gitignore ไม่ commit csv • compile 0/0 • push พร้อม hash
 
 ## T-049 · P3 · Screener engine + calibration (Codex)
-status: READY (Codex เริ่มได้เลย ไม่ต้องรอ T-048)
+status: READY รอบ 2 (Cowork 2026-10-19 ตรวจ bef114c: unit test 6/6 ผ่าน แต่ calibration FAIL — A2 362 ไม้ vs MT5 1124, B2 296 vs 272 (+8.8%) • แก้ใน branch codex/T-049 แล้ว push: (1) A2 ต้องมี time exit 23:30 + ปิดไม้ค้างข้ามวัน (spec-session-breakout S6/T-011) — ตอนนี้ TP 2R อย่างเดียว ไม้ค้างหลายวันจึงบล็อกวันถัดไป (2) A2 ข้ามวันที่กรอบ > 1.5×ATR(14,D1)[1] (3) calibration ทั้ง A2/B2 ต้องใช้ holiday filter (data/files/holidays.csv) + news filter ±30 นาที (data/files/news.csv) เหมือน sbo_a2.set / sbb_b2.set (4) B2: Friday cutoff 20:00 ห้ามเปิดไม้ใหม่ + weekend rule + ห้ามเข้าแท่ง 01:00 (10018) ตาม T-043 (5) `--calibrate` ต้องเขียน docs/research/screener-calibration.md ไม่ใช่แค่ print (6) เพิ่ม research/requirements.txt (SC5) • ห้ามแตะ H1–H8 / screen bar]
 needs: none
 agent: codex
 depends: T-047
-goal: Codex ทำใน worktree branch `codex/T-049` ตาม docs/specs/screener-v1.md SC1–SC3, SC5 • unit test fill model ครบ (SL/TP แท่งเดียว → SL, gap ข้าม SL fill ที่ open, ask = bid+spread, swap พุธ ×3, ห้ามเข้า 00:00–01:00) • implement S-A A2 และ S-B B2 ใน engine เป็น calibration target + script `python -m research.screener --calibrate` ที่พิมพ์ตารางเทียบกับ experiments.md • implement H1–H8 ตาม screen-list-v1 (LOCKED) ตรงตัวอักษร • **Codex ไม่มี Python และไม่มีไฟล์ข้อมูล (csv gitignored อยู่ในโฟลเดอร์หลัก)** → ไม่ต้องรัน: เขียน unit test ด้วย fixture สังเคราะห์เล็กๆ ใน tests/ ให้ Claude รันใน T-050 • engine รับ `--data <path>` (default `data/research/xauusd_m15_2017-07_2022-12.csv`) • push branch แล้วแจ้ง Owner
+goal: Codex ทำใน worktree branch `codex/T-049` ตาม docs/specs/screener-v1.md SC1–SC3, SC5 • unit test fill model ครบ (SL/TP แท่งเดียว → SL, gap ข้าม SL fill ที่ open, ask = bid+spread, swap พุธ ×3, ห้ามเข้า 00:00–01:00) • implement S-A A2 และ S-B B2 ใน engine เป็น calibration target + script `python -m research.screener --calibrate` ที่พิมพ์ตารางเทียบกับ experiments.md • implement H1–H8 ตาม screen-list-v1 (LOCKED) ตรงตัวอักษร • **Codex ไม่มี Python และไม่มีไฟล์ข้อมูล (csv gitignored อยู่ในโฟลเดอร์หลัก)** → ไม่ต้องรัน: เขียน unit test ด้วย fixture สังเคราะห์เล็กๆ ใน tests/ ให้ Claude รันใน T-050 • engine รับ `--data <path>` (default `data/research/xauusd_m15_2017-07_2022-12.csv`) • SC7: `--spread raw|floor` (raw เฉพาะ --calibrate, floor = default ของ screen) + unit test • push branch แล้วแจ้ง Owner
 
 ## T-050 · P3 · Review/merge screener + รัน screen-list-v1 ครั้งเดียว
 status: WAIT_OWNER
 needs: none
 agent: claude
 depends: T-048, T-049
-goal: [Cowork/Owner เปลี่ยนเป็น READY เมื่อ Codex push codex/T-049] review + merge codex/T-049 ตามกติกา T-046 (แตะเฉพาะ research/**, docs/research/**, tests) • รัน unit test ของ Codex (ล้ม = BLOCKED ส่งกลับ Codex) • รัน `--calibrate` → เขียน docs/research/screener-calibration.md • calibration ต้องผ่านตาม Pipeline ข้อ 3 ของ spec ไม่งั้น BLOCKED (ห้ามแก้ engine เอง) • ผ่านแล้วรัน screen-list-v1 ครั้งเดียว → docs/strategy/screen-results-v1.md ตารางทุก variant + ตัดสินตาม screen bar SC4 • ห้ามปรับพารามิเตอร์/รันซ้ำด้วยค่าอื่น • push พร้อม hash
+goal: [Cowork/Owner เปลี่ยนเป็น READY เมื่อ Codex push codex/T-049] review + merge codex/T-049 ตามกติกา T-046 (แตะเฉพาะ research/**, docs/research/**, tests) • รัน unit test ของ Codex (ล้ม = BLOCKED ส่งกลับ Codex) • รัน `--calibrate --spread raw` → เขียน docs/research/screener-calibration.md • calibration ต้องผ่านตาม Pipeline ข้อ 3 ของ spec ไม่งั้น BLOCKED (ห้ามแก้ engine เอง) • ผ่านแล้วรัน screen-list-v1 ด้วย `--spread floor` (พิมพ์ตาราง floor 24 ชั่วโมงในรายงาน) ครั้งเดียว → docs/strategy/screen-results-v1.md ตารางทุก variant + ตัดสินตาม screen bar SC4 • ห้ามปรับพารามิเตอร์/รันซ้ำด้วยค่าอื่น • push พร้อม hash
 

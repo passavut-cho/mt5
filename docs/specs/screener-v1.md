@@ -1,6 +1,6 @@
 # Spec — Strategy Screener v1 (R1) — APPROVED
 
-**Status:** APPROVED โดย Owner 2026-10-19 (SC1–SC6 ตามที่เสนอ) • screen-list-v1 LOCKED
+**Status:** APPROVED โดย Owner 2026-10-19 (SC1–SC6 ตามที่เสนอ • SC7 อนุมัติเพิ่มหลัง T-048) • screen-list-v1 LOCKED
 **เหตุผล:** 3 ตระกูล (EMA, S-A, S-B) ไม่ผ่าน bar • วงจร MT5 ต่อ 1 ไอเดีย ≈ ครึ่ง–1 วัน และทุก look บน research set เพิ่มโอกาสเจอผลบังเอิญ → คัดกรองหลายไอเดียแบบลงทะเบียนล่วงหน้าใน Python ครั้งเดียว แล้วส่งเฉพาะตัวที่ผ่านไปยืนยันใน MT5
 
 ## Pipeline (ห้ามข้ามขั้น)
@@ -41,3 +41,12 @@
 | SC4 | screen bar ตามตาราง | ตามที่เขียน |
 | SC5 | แบ่งงาน: export = Claude (MT5), engine + calibration + screen = Codex, review/merge = Claude | ตามที่เขียน |
 | SC6 | รายการ hypothesis | `screen-list-v1.md` 8 ตัว / 14 variants — ล็อกก่อนเขียน engine |
+
+## SC7 — spread = 0 ในข้อมูล (เพิ่มหลัง T-048, ก่อนรันใดๆ) — APPROVED โดย Owner 2026-10-19
+พบใน `docs/research/screener-data.md`: แท่ง spread=0 = **76% ของปี 2021–2022** (2018–2020 แค่ 2–3%) → fill model SC1 จะคิดต้นทุนต่ำเกินจริง
+- **ตัดสิน:** engine มี 2 โหมด
+  - `--spread raw` = ใช้ spread ตามไฟล์ตรงตัว → **ใช้เฉพาะ calibration** (MT5 Model=1 ใน T-032/T-045 ก็ใช้ข้อมูลชุดเดียวกันนี้ ต้องเทียบแบบเดียวกัน)
+  - `--spread floor` (default ของ screen) = ถ้า spread ของแท่ง = 0 → แทนด้วย **median ของ spread ที่ไม่ใช่ 0 ปี 2018–2020 แยกตามชั่วโมง server** (ตาราง 24 ค่า คำนวณจากไฟล์ แล้วพิมพ์ลงรายงาน) • แท่งที่ spread > 0 ใช้ค่าเดิม
+- stress +20 points ยังใช้ทับอีกชั้นเหมือนเดิม
+- ข้อสังเกต: ผล MT5 ของ S-A/S-B ปี 2021–2022 จึงคิดต้นทุนต่ำไปด้วย — ทั้งคู่ไม่ผ่านอยู่แล้ว จึงไม่เปลี่ยนข้อสรุป
+
