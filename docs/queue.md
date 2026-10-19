@@ -323,7 +323,7 @@ depends: —
 goal: อ่าน docs/specs/screener-v1.md (SC1–SC6) + docs/strategy/screen-list-v1.md แล้วตอบ "ตามที่เสนอ" หรือแก้ • Cowork เปลี่ยน status spec + list เป็น APPROVED/LOCKED และปลด T-048–T-050
 
 ## T-048 · P3 · Export M15 XAUUSD 2017-07 → 2022-12 สำหรับ screener
-status: READY
+status: DONE f52f940 (129,978 แท่ง 2017-06-30→2022-12-30, sha256 b6ff7ec5… • ⚠️ spread=0 ใน 76% ของแท่งปี 2021–2022 — ดู docs/research/screener-data.md)
 needs: mt5-closed
 agent: claude
 depends: T-047
