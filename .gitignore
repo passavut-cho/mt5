@@ -27,3 +27,6 @@ data/files/telemetry/*.tmp
 
 # dashboard output
 data/dashboard/
+
+# screener research data (ใหญ่ — ใช้ checksum ใน docs/research/screener-data.md)
+data/research/xauusd_m15_*.csv
