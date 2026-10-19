@@ -298,14 +298,21 @@ goal: implement ตาม docs/strategy/spec-donchian-h4.md (APPROVED) เป็
 ## T-044 · Tooling · report_stats.py รองรับ partial close + swap/weekend
 status: READY
 needs: none
-agent: any
+agent: codex
 depends: —
-goal: report_stats.py ต้องรวม deal ขาออกหลายตัวของ position เดียวเป็น 1 ไม้ (net/commission/swap รวม) • เพิ่มส่วน: swap รวมแยก long/short, จำนวนคืนที่ถือเฉลี่ย, ไม้ที่ถือข้ามสุดสัปดาห์ (จำนวน + net), ไม้ที่ขาดทุนเกิน 1R (gap) • unit test ด้วย fixture HTML เล็กๆ ที่มี partial (ไม่ใช้ MT5) • ผลของ report SmartEA_sbo_a2.htm ต้องเท่าเดิม (regression) • push พร้อม hash (codex: ส่ง PR)
+goal: report_stats.py ต้องรวม deal ขาออกหลายตัวของ position เดียวเป็น 1 ไม้ (net/commission/swap รวม) • เพิ่มส่วน: swap รวมแยก long/short, จำนวนคืนที่ถือเฉลี่ย, ไม้ที่ถือข้ามสุดสัปดาห์ (จำนวน + net), ไม้ที่ขาดทุนเกิน 1R (gap) • unit test ด้วย fixture HTML เล็กๆ ที่มี partial (ไม่ใช้ MT5) • ผลของ report SmartEA_sbo_a2.htm ต้องเท่าเดิม (regression) • Codex: ทำใน `D:\Claude Projects\MT5-codex` branch `codex/T-044` → commit + `git push -u origin codex/T-044` (ห้ามแตะ main) แล้วแจ้ง Owner
 
 ## T-045 · P3 · Experiments S-B B1–B4 บน research set 2018–2022
 status: READY
 needs: mt5-closed
 agent: claude
-depends: T-042, T-043, T-044
+depends: T-042, T-043, T-046
 goal: ตรวจก่อน: หัวข้อ "O2 final" ใน spec-donchian-h4.md ต้องมีตัวเลข `InpWeekendLockATR` แล้ว (ถ้ายังเป็น "รอ T-042" → BLOCKED) • ตั้งค่านั้นในทุก set • รัน sbb_b1..b4 ด้วย sbb_research.ini • report_stats.py (+ `--extra-cost-points 20`) • บันทึกใน experiments.md ตาราง + ตัดสินตาม bar ใน spec (รวม swap) ห้ามปรับพารามิเตอร์/เพิ่ม variant หลังเห็นผล • ไม่แตะ 2023–2026 • push พร้อม hash
+
+## T-046 · Tooling · Review + merge งาน Codex T-044
+status: WAIT_OWNER
+needs: none
+agent: claude
+depends: T-039
+goal: [Owner เปลี่ยนเป็น READY เมื่อ Codex แจ้งว่า push branch แล้ว] `git fetch` → ตรวจ `git diff main...origin/codex/T-044 --stat` ต้องแตะเฉพาะ tests/python/** (และ docs ของ tool ถ้ามี) — ถ้าแตะ src/**, RiskManager, Config, queue.md, STATUS.md → BLOCKED • อ่าน diff ทั้งหมด • รัน unit test ของ T-044 + regression `SmartEA_sbo_a2.htm` ต้องได้ net 261.71 PF 1.01 เท่าเดิม • qa-reviewer ไม่มี BLOCKER • `git merge --no-ff origin/codex/T-044` → push main • ตั้ง T-044 = `DONE <merge hash>` และ T-046 = DONE • ไม่ต้องลบ branch remote (Owner ลบเอง)
 

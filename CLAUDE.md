@@ -68,6 +68,7 @@
 5. จบ task: อัปเดต queue.md + STATUS.md → commit + push → พิมพ์ `QUEUE: T-NNN DONE <hash>` หรือ `QUEUE: T-NNN BLOCKED <เหตุผล>`
 6. ไม่มีอะไรทำได้ → พิมพ์ `QUEUE: NOTHING RUNNABLE` + สรุปว่ารออะไร แล้วหยุด
 7. การเลื่อน Phase (`/gate`) และการเปลี่ยน spec เป็น APPROVED ทำได้เฉพาะ Owner
+8. **Codex (ADR 0003):** task `agent: codex` → Claude ข้ามเสมอ (Codex ทำใน worktree `MT5-codex` แล้วส่ง branch `codex/T-NNN`) • `agent: any` → Claude ทำได้ • การ merge งาน Codex ทำผ่าน task review แยก (`agent: claude`) ที่ Cowork เขียน — ตรวจ diff, รัน test, ห้าม merge ถ้าแตะ RiskManager/Config/queue.md/STATUS.md • merge แบบ `git merge --no-ff` ลง main แล้ว push (ห้าม force)
 
 ## Git — commit + push ทุกรอบงาน
 Remote: `origin` → github.com/passavut-cho/mt5 (branch `main`)

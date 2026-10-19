@@ -4,9 +4,10 @@ argument-hint: [T-NNN — ว่าง = task แรกที่ทำได้]
 ---
 ทำตาม "Queue runner" ใน CLAUDE.md:
 
-1. `git status` → ถ้ามีไฟล์ค้างที่ Cowork แก้ (CLAUDE.md, docs/**, scripts/**, .claude/**, tests/**, data/files/*.csv) ให้ commit แยกก่อนเป็น `[P<n>] docs: sync from Cowork` แล้ว push • **ไฟล์ที่ไม่รู้ที่มา (เช่น .agents/, .codex/, AGENTS.md) ห้ามแตะ ห้าม commit** • จากนั้น `git pull --rebase` แล้วอ่าน docs/STATUS.md และ docs/queue.md
+1. `git status` → ถ้ามีไฟล์ค้างที่ Cowork แก้ (CLAUDE.md, docs/**, scripts/**, .claude/**, tests/**, data/files/*.csv) ให้ commit แยกก่อนเป็น `[P<n>] docs: sync from Cowork` แล้ว push • **`.agents/` และ `.codex/` ห้ามแตะ ห้าม commit** (ยกเว้น task ระบุชัด) • AGENTS.md, scripts/hooks/**, docs/decisions/** เป็นไฟล์ของ Cowork (ADR 0003) commit ได้ • จากนั้น `git pull --rebase` แล้วอ่าน docs/STATUS.md และ docs/queue.md
 2. เลือก task: $ARGUMENTS — ถ้าว่าง เลือก task แรกที่ `status: READY` + ทุก depends เป็น DONE + needs ทำได้:
    - `needs: owner` → ข้ามเสมอ
+   - `agent: codex` → ข้ามเสมอ (งานของ Codex ใน worktree)
    - `needs: risk-edit` → ข้ามถ้ารันแบบ headless (`-p`) หรือ Owner ไม่ได้นั่งอยู่
    - `needs: mt5-closed` → ตรวจ `powershell -NoProfile -Command "Get-Process terminal64 -ErrorAction SilentlyContinue"` ต้องว่าง ไม่งั้นข้าม
 3. ไม่มี task ที่ทำได้ → พิมพ์ `QUEUE: NOTHING RUNNABLE` + สรุปว่าแต่ละ task ติดอะไร แล้วหยุด (ไม่แก้ไฟล์ ไม่ commit)
