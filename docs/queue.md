@@ -282,7 +282,7 @@ depends: T-031
 goal: [เพิ่มโดย Code จาก qa-reviewer MAJOR ของ T-031] m_done_day ใน SessionBreakoutSignal.mqh อยู่ใน memory — restart/reattach กลางวันหลังไม้แรกปิดแล้วอาจเปิดไม้ที่ 2 ของวัน • แก้: ตอน Init/เมื่อ m_done_day==0 ตรวจ deal history วันนี้ (magic+symbol) แล้วตั้ง m_done_day • รวม MINOR: CopyRates n==0 → return false, log GetLastError, อัปเดต spec ให้ครบ input • ไม่กระทบ backtest (regression 426 ไม้) • Owner/Cowork จัดลำดับ
 
 ## T-042 · P3 · วัด weekend gap ของ XAUUSD 2018–2022 (ข้อมูลประกอบ O2 ของ S-B)
-status: READY
+status: DONE 50ec560 (253 สัปดาห์: p95 0.95 / p99 1.56 / max 1.59 ATR, >1ATR 10 สัปดาห์, >2ATR 0 — docs/research/weekend-gap.md)
 needs: mt5-closed
 agent: claude
 depends: —
