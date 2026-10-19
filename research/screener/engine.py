@@ -24,6 +24,8 @@ class Intent:
     move_to_be: bool = False
     exit_when: Callable[[int], bool] | None = None
     weekend_lock: bool = False
+    exit_on_day_change: bool = False
+    friday_cutoff: bool = False
     stop_entry: float | None = None
     label: str = ""
 
@@ -142,16 +144,19 @@ def simulate(bars: list[Bar], signal: Callable[[int], Intent | None], *, start_e
         if day in halted_days or marked_equity <= daily_start[day] * 0.97:
             halted_days.add(day)
         if position is not None:
-            if position["trailing"] is not None:
+            if position["exit_on_day_change"] and day > position["time"].date():
+                close_position(i, bar.open, "DAY")
+            if position is not None and position["trailing"] is not None:
                 new_stop = position["trailing"](i)
                 if new_stop is not None:
                     if position["side"] == 1:
                         position["stop"] = max(position["stop"], new_stop)
                     else:
                         position["stop"] = min(position["stop"], new_stop)
-            result = resolve_bar_exit(position["side"], bar, position["stop"], position["target"])
-            if result is not None:
-                close_position(i, result[1], result[0])
+            if position is not None:
+                result = resolve_bar_exit(position["side"], bar, position["stop"], position["target"])
+                if result is not None:
+                    close_position(i, result[1], result[0])
             if position is not None and position["partial_r"] is not None and not position["partial_done"]:
                 partial_level = position["entry"] + position["side"] * position["risk_distance"] * position["partial_r"]
                 touched = bar.high >= partial_level if position["side"] == 1 else bar.low + bar.spread * POINT <= partial_level
@@ -175,6 +180,8 @@ def simulate(bars: list[Bar], signal: Callable[[int], Intent | None], *, start_e
                     close_position(i, price, reason)
                 elif position is not None and position["exit_when"] is not None and position["exit_when"](i):
                     close_position(i, bar.open, "TIME")
+                elif position is not None and position["friday_cutoff"] and bar.time.weekday() == 4 and bar.time.hour >= 20:
+                    close_position(i, bar.open, "FRIDAY")
                 elif position is not None and position["exit_time"] and bar.time >= position["exit_time"]:
                     close_position(i, bar.open, "TIME")
                 elif position is not None and position["weekend_lock"] and bar.time.weekday() == 4 and bar.time.hour >= 20:
@@ -198,7 +205,8 @@ def simulate(bars: list[Bar], signal: Callable[[int], Intent | None], *, start_e
         if position is None and pending is None and i > 0 and day not in halted_days:
             # Signals from the previous completed bar are executed at this bar's open.
             candidate = signal(i - 1)
-            if candidate is not None and market_open_for_entry(bar) and not (candidate.weekend_lock and bar.time.weekday() == 4 and bar.time.hour >= 20):
+            friday_blocked = candidate is not None and candidate.friday_cutoff and bar.time.weekday() == 4 and bar.time.hour >= 20
+            if candidate is not None and market_open_for_entry(bar) and not friday_blocked and not (candidate.weekend_lock and bar.time.weekday() == 4 and bar.time.hour >= 20):
                 pending = candidate
                 entry_price = _entry_fill(candidate, bar)
                 if candidate.stop_entry is None:
@@ -236,6 +244,8 @@ def _open(intent: Intent, bar: Bar, entry: float, equity: float) -> dict | None:
             "trailing": intent.trailing, "exit_time": intent.exit_time,
             "exit_when": intent.exit_when,
             "weekend_lock": intent.weekend_lock,
+            "exit_on_day_change": intent.exit_on_day_change,
+            "friday_cutoff": intent.friday_cutoff,
             "partial_r": intent.partial_r, "partial_done": False,
             "move_to_be": intent.move_to_be, "partial_gross": 0.0}
 
